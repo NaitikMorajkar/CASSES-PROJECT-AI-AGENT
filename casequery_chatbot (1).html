@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaseQuery — Detective Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:      #0a0a0f;
+    --surface: #111118;
+    --border:  #1e1e2e;
+    --accent:  #7c3aed;
+    --accent2: #06b6d4;
+    --success: #22c55e;
+    --warn:    #f59e0b;
+    --danger:  #ef4444;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .bot-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .bot-info h2 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .bot-status {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--success);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .croo-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent2);
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.2);
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+  }
+
+  /* ── QUICK TOPICS ── */
+  .quick-topics {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    background: var(--surface);
+  }
+
+  .topic-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .topic-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── CHAT AREA ── */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .message {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 80%;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message.bot { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  .bot .msg-avatar {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+
+  .user .msg-avatar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .msg-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .bot .msg-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+
+  .user .msg-bubble {
+    background: var(--accent);
+    color: white;
+    border-top-right-radius: 4px;
+  }
+
+  .msg-bubble code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(124,58,237,0.2);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--accent2);
+  }
+
+  .msg-bubble pre {
+    font-family: 'JetBrains Mono', monospace;
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--accent2);
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  .msg-bubble .highlight {
+    color: var(--warn);
+    font-weight: 700;
+  }
+
+  .msg-bubble .success {
+    color: var(--success);
+  }
+
+  .msg-bubble ul {
+    margin-left: 1.25rem;
+    margin-top: 0.4rem;
+  }
+
+  .msg-bubble li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* SUGGESTION CHIPS */
+  .suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+
+  .chip {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chip:hover {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* TYPING INDICATOR */
+  .typing {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    align-self: flex-start;
+  }
+
+  .typing-dots {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    border-top-left-radius: 4px;
+  }
+
+  .typing-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: typing 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typing {
+    0%,100% { opacity: 0.3; transform: translateY(0); }
+    50%      { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* ── INPUT BAR ── */
+  .input-bar {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.88rem;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--muted); }
+
+  .send-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    width: 42px; height: 42px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: #6d28d9; }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .message { max-width: 95%; }
+    .croo-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="bot-avatar">🕵️</div>
+    <div class="bot-info">
+      <h2>CaseQuery Assistant</h2>
+      <div class="bot-status">
+        <span class="status-dot"></span>
+        Online — Ready to help
+      </div>
+    </div>
+  </div>
+  <div class="croo-badge">⚡ Powered by CROO Network</div>
+</div>
+
+<!-- QUICK TOPICS -->
+<div class="quick-topics">
+  <button class="topic-btn" onclick="quickTopic('how to play')">🎮 How to Play</button>
+  <button class="topic-btn" onclick="quickTopic('sql help')">💻 SQL Help</button>
+  <button class="topic-btn" onclick="quickTopic('case 1 hint')">🏭 Case 1 Hint</button>
+  <button class="topic-btn" onclick="quickTopic('case 2 hint')">⌚ Case 2 Hint</button>
+  <button class="topic-btn" onclick="quickTopic('case 3 hint')">👻 Case 3 Hint</button>
+  <button class="topic-btn" onclick="quickTopic('payment help')">💰 Payment Help</button>
+  <button class="topic-btn" onclick="quickTopic('web3 explain')">🌐 Web3 Kya Hai</button>
+  <button class="topic-btn" onclick="quickTopic('tables list')">📋 Tables List</button>
+</div>
+
+<!-- CHAT AREA -->
+<div class="chat-area" id="chat-area"></div>
+
+<!-- INPUT BAR -->
+<div class="input-bar">
+  <input
+    class="chat-input"
+    id="chat-input"
+    type="text"
+    placeholder="Koi bhi sawaal poochho — SQL, cases, payment, kuch bhi..."
+    onkeydown="if(event.key==='Enter') sendMessage()"
+  >
+  <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// KNOWLEDGE BASE
+// ════════════════════════════════════════
+const KB = {
+  greet: {
+    triggers: ['hi','hello','hey','hii','helo','namaste','namaskar','kya haal','sup'],
+    response: () => ({
+      text: `Namaste! 👋 Main hoon <strong>CaseQuery Assistant</strong> — tumhara detective companion.<br><br>
+Main tumhari help kar sakta hoon:
+<ul>
+  <li>🎮 Game kaise khelein</li>
+  <li>💻 SQL queries likhna</li>
+  <li>🔍 Case hints</li>
+  <li>💰 Payment aur staking</li>
+  <li>🌐 Web3 concepts</li>
+  <li>🐛 Koi problem ho toh</li>
+</ul>
+Kya poochna hai?`,
+      chips: ['How to play', 'SQL help chahiye', 'Case hint do', 'Payment kaise kaam karta hai']
+    })
+  },
+
+  howToPlay: {
+    triggers: ['how to play','kaise khelte','game kaise','khelna','start kaise','shuru kaise','play kaise'],
+    response: () => ({
+      text: `CaseQuery khelne ka tarika bilkul simple hai! 🎮<br><br>
+<strong>Step 1 — Case Choose karo:</strong><br>
+Teen cases hain — Easy se Expert tak. Apni choice karo.<br><br>
+<strong>Step 2 — Mode Choose karo:</strong><br>
+• <strong>SQL Mode</strong> — Khud queries likho, zyada reward<br>
+• <strong>Detective Mode</strong> — Guided questions, no coding needed<br><br>
+<strong>Step 3 — Stake karo:</strong><br>
+USDC stake karo CROO CAP Protocol se. Case unlock hoga.<br><br>
+<strong>Step 4 — Investigate karo:</strong><br>
+Tables explore karo, clues dhundho, queries chalao.<br><br>
+<strong>Step 5 — Answer do:</strong><br>
+Killer ka naam submit karo. Sahi hua → USDC wapas + bonus!`,
+      chips: ['SQL mode better hai ya Detective?', 'Kitna stake karna hai?', 'Tables kaise dekhun?']
+    })
+  },
+
+  sqlHelp: {
+    triggers: ['sql','query','select','where','join','sql help','query kaise','sql samjhao','sql nahi aata'],
+    response: () => ({
+      text: `SQL bilkul easy hai — sirf 4 commands yaad rakho! 💻<br><br>
+<strong>1. Sab data dekho:</strong>
+<pre>SELECT * FROM suspects;</pre>
+<strong>2. Specific column:</strong>
+<pre>SELECT name, role FROM suspects;</pre>
+<strong>3. Condition lagao:</strong>
+<pre>SELECT * FROM suspects
+WHERE role = 'Driver';</pre>
+<strong>4. Do tables jodo (JOIN):</strong>
+<pre>SELECT s.name, al.location
+FROM suspects s
+JOIN access_logs al
+ON s.id = al.suspect_id;</pre>
+Bas itna! Kaunsa case karte ho? Main exact query suggest karunga.`,
+      chips: ['Case 1 ki query do', 'JOIN samjhao', 'WHERE clause kaise likhun?', 'ORDER BY kya hai']
+    })
+  },
+
+  joinExplain: {
+    triggers: ['join','join kya','join samjhao','tables jodna'],
+    response: () => ({
+      text: `JOIN do tables ko jodta hai — jab ek table mein doosri ka reference ho! 🔗<br><br>
+<strong>Example:</strong><br>
+• <code>suspects</code> table mein <code>id</code> hai<br>
+• <code>access_logs</code> mein <code>suspect_id</code> hai<br><br>
+Inhe jodne ke liye:
+<pre>SELECT s.name, al.entry_time, al.location
+FROM suspects s
+JOIN access_logs al
+ON s.id = al.suspect_id;</pre>
+<strong>Simple formula:</strong><br>
+<code>FROM table1 t1 JOIN table2 t2 ON t1.id = t2.foreign_key</code><br><br>
+Iska result — dono tables ka data ek saath milega!`,
+      chips: ['Case 1 mein JOIN kahan use karun?', 'Multiple JOIN kaise?', 'WHERE ke saath JOIN?']
+    })
+  },
+
+  whereClause: {
+    triggers: ['where','condition','filter','where clause'],
+    response: () => ({
+      text: `WHERE clause data filter karta hai — sirf wahi rows jo condition match karein! 🎯<br><br>
+<strong>Basic:</strong>
+<pre>SELECT * FROM suspects WHERE role = 'Driver';</pre>
+<strong>Multiple conditions (AND):</strong>
+<pre>SELECT * FROM access_logs
+WHERE location = 'Warehouse Floor'
+AND entry_time > '2026-06-20 21:00';</pre>
+<strong>Text search (LIKE):</strong>
+<pre>SELECT * FROM suspects
+WHERE name LIKE '%Becker%';</pre>
+<strong>Number comparison:</strong>
+<pre>SELECT * FROM transactions
+WHERE amount > 5000;</pre>`,
+      chips: ['ORDER BY kya hai?', 'LIKE kaise use karein?', 'Case 1 hints do']
+    })
+  },
+
+  orderBy: {
+    triggers: ['order by','sort','sorting','arrange'],
+    response: () => ({
+      text: `ORDER BY results ko sort karta hai! 📊<br><br>
+<strong>Ascending (A to Z, small to large):</strong>
+<pre>SELECT * FROM transactions
+ORDER BY amount ASC;</pre>
+<strong>Descending (Z to A, large to small):</strong>
+<pre>SELECT * FROM transactions
+ORDER BY amount DESC;</pre>
+<strong>Date se sort:</strong>
+<pre>SELECT * FROM access_logs
+ORDER BY entry_time DESC;</pre>
+<span class="highlight">Tip:</span> Case 3 mein dark_web_messages ko delay_seconds se sort karo — important clue milega! 👀`,
+      chips: ['LIMIT kya hai?', 'Case 3 hints do', 'More SQL help']
+    })
+  },
+
+  limitClause: {
+    triggers: ['limit','top','first','sirf kuch'],
+    response: () => ({
+      text: `LIMIT sirf utne results dikhata hai jitne tum chahte ho! ✂️<br><br>
+<strong>Pehle 5 rows:</strong>
+<pre>SELECT * FROM suspects LIMIT 5;</pre>
+<strong>Sabse bada transaction:</strong>
+<pre>SELECT * FROM transactions
+ORDER BY amount DESC
+LIMIT 1;</pre>
+<strong>Useful pattern:</strong>
+<pre>SELECT * FROM dark_web_messages
+ORDER BY delay_seconds ASC
+LIMIT 10;</pre>`,
+      chips: ['Case 3 SQL query do', 'JOIN samjhao', 'Back to basics']
+    })
+  },
+
+  case1Hint: {
+    triggers: ['case 1','case 001','greenline','warehouse','case 1 hint','case ek'],
+    response: () => ({
+      text: `Case #001 — The Greenline Double Cross 🏭<br><br>
+<strong>Main raaz:</strong> Do alag crimes — chori alag, murder alag.<br><br>
+<strong>Layer 1 — CCTV anomaly dekho:</strong>
+<pre>SELECT * FROM cctv_logs
+ORDER BY entry_time;</pre>
+Ek insaan 2 baar andar gaya — par dono baar height alag hai!<br><br>
+<strong>Layer 2 — Twin check karo:</strong>
+<pre>SELECT name, twin_id, actual_height,
+       distinguishing_features
+FROM suspects
+WHERE twin_id IS NOT NULL;</pre>
+<span class="highlight">Big hint:</span> Tom aur Tim — bilkul ek jaise dikhte hain — par left eye mein fark hai! 👀`,
+      chips: ['Case 1 ka killer kaun?', 'Psychological records kaise dekhun?', 'Pizza order clue kya hai?']
+    })
+  },
+
+  case1Killer: {
+    triggers: ['case 1 killer','case 1 answer','greenline killer','warehouse killer','case 1 solution'],
+    response: () => ({
+      text: `Seedha bolunga — do criminals hain! ⚠️<br><br>
+<strong>Chori ka mastermind:</strong> Tom Becker<br>
+<strong>Murder ka doshi:</strong> Tim Becker (Tom ka twin)<br><br>
+<strong>Proof kaise nikalega:</strong>
+<pre>-- Step 1: CCTV height mismatch
+SELECT suspect_name, height_estimate,
+       facial_features
+FROM cctv_logs;
+
+-- Step 2: Twin reveal
+SELECT s1.name, s2.name as twin_name
+FROM suspects s1
+JOIN suspects s2 ON s1.twin_id = s2.id;
+
+-- Step 3: Evidence
+SELECT * FROM evidence
+WHERE evidence_type = 'Poison Vial';</pre>
+Final answer dono names mein se koi bhi accept hoga!`,
+      chips: ['Case 2 hints do', 'Case 3 hints do', 'SQL mode tips']
+    })
+  },
+
+  case2Hint: {
+    triggers: ['case 2','case 002','deshpande','watch','poison watch','case 2 hint','case do'],
+    response: () => ({
+      text: `Case #002 — The Deshpande Murder ⌚<br><br>
+<strong>Main raaz:</strong> Suicide nahi — murder tha. Watch mein poison needle thi.<br><br>
+<strong>Layer 1 — Forensic report dekho:</strong>
+<pre>SELECT * FROM forensic_report;</pre>
+Poison itna high level ka — sirf military ya law enforcement la sakta!<br><br>
+<strong>Layer 2 — Watch evidence:</strong>
+<pre>SELECT s.name, w.time_stopped,
+       w.needle_found, w.notes
+FROM watch_evidence w
+JOIN suspects s ON s.id = w.owner_id;</pre>
+<span class="highlight">Big hint:</span> Ghadi ka time exactly murder ke waqt ruka tha — aur needle poisoned thi! 💉`,
+      chips: ['Case 2 ka killer kaun?', 'Blackmail records kaise dekhun?', 'Background records kya hain?']
+    })
+  },
+
+  case2Killer: {
+    triggers: ['case 2 killer','deshpande killer','case 2 answer','case 2 solution','rahul'],
+    response: () => ({
+      text: `Case #002 ka killer — <strong>Inspector Rahul Desai</strong> 🎯<br><br>
+<strong>Karna jaisa character</strong> — na bura tha, na achha — system ne toda.<br><br>
+<strong>Complete proof chain:</strong>
+<pre>-- 1. Poison source
+SELECT who_can_access FROM forensic_report;
+-- Result: Military ya Law Enforcement only
+
+-- 2. Watch evidence  
+SELECT * FROM watch_evidence;
+-- Result: Rahul ki watch — time 23:32 ruka — needle!
+
+-- 3. Motive
+SELECT * FROM blackmail_records;
+-- Result: Rohini ne 3 baar blackmail kiya
+
+-- 4. Background
+SELECT * FROM background_records
+WHERE person_id = 3;</pre>
+Omkar ne solve kiya — watch ka time ruka dekha! 🔍`,
+      chips: ['Omkar ne kaise solve kiya?', 'Case 3 hints do', 'Karna angle explain karo']
+    })
+  },
+
+  case3Hint: {
+    triggers: ['case 3','case 003','ghost','nexvault','web3 case','ghost protocol','case 3 hint','case teen'],
+    response: () => ({
+      text: `Case #003 — The Ghost Protocol 👻<br><br>
+<strong>Main raaz:</strong> Ghost_X = 2 log. Aur Vikram ka murder — sabse bada twist.<br><br>
+<strong>Layer 1 — CROO Agent dekho:</strong>
+<pre>SELECT * FROM croo_agent_store
+WHERE service_type = 'crypto_mixing';</pre>
+ShadowMix — 5 din pehle register hua — pre-planned tha!<br><br>
+<strong>Layer 2 — "Too easy" pattern:</strong>
+<pre>SELECT server_location, delay_seconds,
+       timestamp
+FROM dark_web_messages
+ORDER BY delay_seconds ASC;</pre>
+<span class="highlight">Big hint:</span> 47 messages — sab EU server — 180 seconds. Sirf ek — MUMBAI — 167 seconds. 13 second ka fark! 🌐`,
+      chips: ['Ghost_X kaun hai?', 'Vikram ka killer kaun?', 'Wallet trace kaise karein?', 'Web3 explain karo']
+    })
+  },
+
+  case3Killer: {
+    triggers: ['case 3 killer','ghost x kaun','ghostx','aryan','joi','vikram killer','case 3 answer'],
+    response: () => ({
+      text: `Case #003 — Sabse complex answer! 🤯<br><br>
+<strong>Ghost_X = Aryan Malhotra + Joi Sharma</strong><br>
+• Aryan — brain (police officer ka beta)<br>
+• Joi — hands (hacker, behen ki shaadi toot gayi)<br><br>
+<strong>Vikram ka killer = Aryan Malhotra</strong><br>
+Papa sach batane ja rahe the — Aryan rok nahi paaya<br><br>
+<strong>Proof SQL:</strong>
+<pre>-- Ghost_X identity
+SELECT * FROM wallet_connections
+WHERE connected_to LIKE '%ShadowMix%';
+
+-- Vikram ka murder
+SELECT * FROM vikram_case_files
+WHERE status = 'DELETED';
+
+-- Diary entry
+SELECT * FROM diary_entries
+WHERE author = 'Vikram';</pre>
+<span class="highlight">Note:</span> Case partially closed — Part 2 coming soon! 🔜`,
+      chips: ['Part 2 kab aayega?', 'Web3 concepts explain karo', 'CROO kya hai?']
+    })
+  },
+
+  paymentHelp: {
+    triggers: ['payment','stake','usdc','paisa','pay','payout','reward','jeet','lose','khoya'],
+    response: () => ({
+      text: `Payment system bilkul simple hai! 💰<br><br>
+<strong>Staking:</strong><br>
+• Case 1 & 2 → <span class="highlight">1 USDC stake</span><br>
+• Case 3 → <span class="highlight">2 USDC stake</span><br><br>
+<strong>Winning:</strong><br>
+• Case 1 & 2 sahi → <span class="success">+1.5 USDC automatic payout</span><br>
+• Case 3 sahi → <span class="success">+3 USDC automatic payout</span><br><br>
+<strong>Losing:</strong><br>
+• Galat answer → stake forfeit<br>
+• Par retry kar sakte ho!<br><br>
+<strong>Technology:</strong><br>
+Sab CROO CAP Protocol se hota hai — automatic, no middleman, blockchain pe verified! ⚡`,
+      chips: ['CROO kya hai?', 'USDC kya hai?', 'Wallet kaise connect karein?']
+    })
+  },
+
+  web3Explain: {
+    triggers: ['web3','blockchain','crypto','decentralized','web 3','web3 kya','crypto kya'],
+    response: () => ({
+      text: `Web3 simple bhasha mein! 🌐<br><br>
+<strong>Web2 (abhi):</strong><br>
+Tumhara paisa → Bank → Bank ke rules → Bank control<br><br>
+<strong>Web3 (future):</strong><br>
+Tumhara paisa → Tumhara wallet → Code ke rules → No middleman<br><br>
+<strong>CaseQuery mein Web3:</strong><br>
+• <strong>USDC</strong> — digital dollar, stable value<br>
+• <strong>Wallet</strong> — tumhara digital bank account<br>
+• <strong>Smart Contract</strong> — automatic rule: "Sahi answer → auto pay"<br>
+• <strong>CROO CAP</strong> — agent economy ka payment layer<br><br>
+<span class="success">Simple: Sahi answer diya → Code khud tumhe paisa deta hai. Koi manually nahi karta!</span>`,
+      chips: ['CROO CAP kya hai?', 'ShadowMix kya tha?', 'Case 3 Web3 connection?']
+    })
+  },
+
+  crooExplain: {
+    triggers: ['croo','cap protocol','agent store','shadowmix','croo kya','cap kya'],
+    response: () => ({
+      text: `CROO — Agent Commerce Layer! 🤖<br><br>
+<strong>Simple explanation:</strong><br>
+CROO = App Store for AI Agents<br><br>
+<strong>CAP Protocol:</strong><br>
+• Agents ek doosre ko hire kar sakte hain<br>
+• Payment automatic — on-chain<br>
+• Koi permission nahi chahiye<br><br>
+<strong>CaseQuery mein CROO:</strong><br>
+• CaseQuery ek CROO agent hai<br>
+• Tumhara stake → CAP se process<br>
+• Sahi answer → automatic payout<br><br>
+<strong>Case #003 connection:</strong><br>
+Ghost_X ne <strong>ShadowMix</strong> naam ka mixing agent CROO pe register kiya tha — aur yahi uski sabse badi galti thi! CROO records se wallet trace hua. 🎯`,
+      chips: ['Case 3 solve karo', 'Web3 aur batao', 'Payment kaise kaam karta?']
+    })
+  },
+
+  tablesList: {
+    triggers: ['tables','table','columns','schema','database','kaunsi tables','tables list'],
+    response: () => ({
+      text: `Har case ki tables! 📋<br><br>
+<strong>Case #001 — Greenline:</strong><br>
+<code>suspects</code> • <code>access_logs</code> • <code>alibis</code><br>
+<code>transactions</code> • <code>cctv_logs</code> • <code>call_logs</code><br>
+<code>delivery_orders</code> • <code>evidence</code><br>
+<code>psychological_records</code> • <code>family_records</code><br><br>
+<strong>Case #002 — Deshpande:</strong><br>
+<code>suspects</code> • <code>access_logs</code> • <code>watch_evidence</code><br>
+<code>phone_records</code> • <code>forensic_report</code> • <code>cctv_logs</code><br>
+<code>blackmail_records</code> • <code>background_records</code><br><br>
+<strong>Case #003 — Ghost Protocol:</strong><br>
+<code>suspects</code> • <code>transactions</code> • <code>smart_contracts</code><br>
+<code>croo_agent_store</code> • <code>dark_web_messages</code><br>
+<code>wallet_connections</code> • <code>nexvault_victims</code><br>
+<code>evidence</code> • <code>diary_entries</code> • <code>vikram_case_files</code>`,
+      chips: ['Case 1 SQL query do', 'Case 2 SQL query do', 'Case 3 SQL query do']
+    })
+  },
+
+  sqlModeVsDetective: {
+    triggers: ['sql mode better','detective mode','kaunsa mode','mode konsa','sql ya detective'],
+    response: () => ({
+      text: `Dono modes ka comparison! ⚔️<br><br>
+<strong>💻 SQL Mode:</strong><br>
+✅ Real SQL queries likhna<br>
+✅ Direct database access<br>
+✅ Zyada reward (1.5x ya 3x)<br>
+✅ Full control<br>
+❌ SQL basic jaana chahiye<br><br>
+<strong>🔍 Detective Mode:</strong><br>
+✅ No coding needed<br>
+✅ Guided questions<br>
+✅ Beginners ke liye perfect<br>
+❌ Thoda less reward<br><br>
+<strong>Meri recommendation:</strong><br>
+• SQL seekhna chahte ho → <span class="highlight">SQL Mode</span><br>
+• Sirf story enjoy karna hai → <span class="highlight">Detective Mode</span><br>
+• Competition ke liye → <span class="highlight">SQL Mode</span> (judges ko impressive lagta hai!) 🎯`,
+      chips: ['SQL basics sikhaao', 'Detective mode mein tips', 'Case 1 start karein']
+    })
+  },
+
+  problem: {
+    triggers: ['problem','issue','error','nahi chal raha','stuck','help','kaam nahi','query error','galat'],
+    response: () => ({
+      text: `Koi baat nahi — solve karte hain! 🔧<br><br>
+<strong>Common problems aur solutions:</strong><br><br>
+<strong>1. Query error aata hai?</strong><br>
+• Table name exact likho — lowercase<br>
+• Quotes check karo — single quotes use karo<br>
+• Example: <code>WHERE name = 'Tim Becker'</code><br><br>
+<strong>2. Results nahi aa rahe?</strong><br>
+• Pehle <code>SELECT * FROM tablename;</code> try karo<br>
+• Spelling check karo<br><br>
+<strong>3. Payment nahi hua?</strong><br>
+• Wallet connected hai?<br>
+• USDC balance check karo<br><br>
+<strong>4. Answer accept nahi hua?</strong><br>
+• Full naam likho — e.g. "Tim Becker"<br>
+• Spelling correct karo<br><br>
+Exact error batao — aur help karunga! 😊`,
+      chips: ['Query example do', 'Payment issue', 'Case hints chahiye']
+    })
+  },
+
+  thankYou: {
+    triggers: ['thanks','thank you','shukriya','dhanyawad','ty','helpful','acha','bढ़iया','achha','bahut acha'],
+    response: () => ({
+      text: `Khushi hui help karke! 😊🎉<br><br>
+Ab jao aur solve karo woh case — killer dhundho! 🔍<br><br>
+<span class="success">All the best Detective! 💪</span><br><br>
+Agar aur kuch chahiye — main yahin hoon!`,
+      chips: ['Case 1 start', 'Case 2 start', 'Case 3 start']
+    })
+  },
+
+  partTwo: {
+    triggers: ['part 2','part two','next part','sequel','aage kya','story aage'],
+    response: () => ({
+      text: `Part 2 — Coming Soon! 🔜<br><br>
+<strong>Case #003 mein jo hua:</strong><br>
+• Vikram Malhotra — murder — Aryan ne kiya<br>
+• Handwriting note match nahi ki<br>
+• Case "partially closed"<br><br>
+<strong>Part 2 mein hoga:</strong><br>
+• Joi bahar aayega jail se<br>
+• Aryan ka guilt — toot raha hai andar se<br>
+• Ek naya detective — Aryan ko track kar raha hai<br>
+• "Too easy" — Aryan ka message — wapas aayega<br><br>
+<span class="highlight">Stay tuned — CROO network pe update milega! ⚡</span>`,
+      chips: ['Case 3 complete karo pehle', 'Ghost Protocol solve karo', 'CROO pe follow karo']
+    })
+  },
+
+  default: {
+    response: (msg) => ({
+      text: `Hmm, yeh main samajh nahi paaya — thoda aur clearly batao? 🤔<br><br>
+Main help kar sakta hoon:
+<ul>
+  <li>💻 SQL queries likhna</li>
+  <li>🔍 Case hints</li>
+  <li>💰 Payment/staking</li>
+  <li>🌐 Web3 concepts</li>
+  <li>🐛 Technical problems</li>
+</ul>
+Ya neeche se koi topic choose karo!`,
+      chips: ['How to play', 'SQL help do', 'Case hints', 'Payment samjhao']
+    })
+  }
+};
+
+// ════════════════════════════════════════
+// CHAT ENGINE
+// ════════════════════════════════════════
+
+// Welcome message
+window.onload = () => {
+  setTimeout(() => {
+    addBotMessage({
+      text: `Namaste! Main hoon <strong>CaseQuery Assistant</strong> 🕵️<br><br>
+Tumhari madad ke liye yahan hoon — SQL, cases, payment, ya koi bhi sawaal!<br><br>
+<span class="success">Kya poochna chahte ho?</span>`,
+      chips: ['Game kaise khelein', 'SQL help chahiye', 'Case hints do', 'Payment kaise kaam karta?']
+    });
+  }, 500);
+};
+
+function quickTopic(topic) {
+  document.getElementById('chat-input').value = topic;
+  sendMessage();
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  addUserMessage(text);
+  input.value = '';
+  document.getElementById('send-btn').disabled = true;
+
+  // Show typing
+  const typingId = showTyping();
+
+  setTimeout(() => {
+    removeTyping(typingId);
+    const response = getResponse(text.toLowerCase());
+    addBotMessage(response);
+    document.getElementById('send-btn').disabled = false;
+    input.focus();
+  }, 800 + Math.random() * 600);
+}
+
+function getResponse(text) {
+  // Check all KB entries
+  for (const [key, entry] of Object.entries(KB)) {
+    if (key === 'default') continue;
+    if (entry.triggers && entry.triggers.some(t => text.includes(t))) {
+      return entry.response(text);
+    }
+  }
+
+  // Special checks
+  if (text.includes('select') || text.includes('from') || text.includes('where')) {
+    return {
+      text: `Query likhna seekh rahe ho — great! 💻<br><br>
+Kaunse case ke liye query chahiye?`,
+      chips: ['Case 1 ki query do', 'Case 2 ki query do', 'Case 3 ki query do', 'SQL basics sikhaao']
+    };
+  }
+
+  if (text.includes('case') && text.includes('3') || text.includes('teen')) {
+    return KB.case3Hint.response();
+  }
+
+  if (text.includes('case') && text.includes('2') || text.includes('do')) {
+    return KB.case2Hint.response();
+  }
+
+  if (text.includes('case') && text.includes('1') || text.includes('ek')) {
+    return KB.case1Hint.response();
+  }
+
+  return KB.default.response(text);
+}
+
+function addUserMessage(text) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'message user';
+  div.innerHTML = `
+    <div class="msg-avatar">👤</div>
+    <div class="msg-bubble">${escapeHtml(text)}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addBotMessage(data) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+
+  let chipsHTML = '';
+  if (data.chips && data.chips.length) {
+    chipsHTML = `<div class="suggestion-chips">
+      ${data.chips.map(c => `<button class="chip" onclick="quickTopic('${c}')">${c}</button>`).join('')}
+    </div>`;
+  }
+
+  div.innerHTML = `
+    <div class="msg-avatar">🕵️</div>
+    <div class="msg-bubble">${data.text}${chipsHTML}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showTyping() {
+  const area = document.getElementById('chat-area');
+  const id = 'typing-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.id = id;
+  div.innerHTML = `
+    <div class="msg-avatar bot-avatar" style="width:32px;height:32px;font-size:0.9rem;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#06b6d4);display:flex;align-items:center;justify-content:center;">🕵️</div>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

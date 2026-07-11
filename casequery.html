@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaseQuery — Stake. Solve. Collect.</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:       #0a0a0f;
+    --surface:  #111118;
+    --border:   #1e1e2e;
+    --accent:   #7c3aed;
+    --accent2:  #06b6d4;
+    --danger:   #ef4444;
+    --success:  #22c55e;
+    --warn:     #f59e0b;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --code-bg:  #0d0d14;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0; z-index:999; pointer-events:none;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+    );
+  }
+
+  /* ── SCREENS ── */
+  .screen { display:none; min-height:100vh; }
+  .screen.active { display:flex; flex-direction:column; }
+
+  /* ══════════════════════════════════════
+     LANDING SCREEN
+  ══════════════════════════════════════ */
+  #landing {
+    align-items:center; justify-content:center;
+    padding:2rem; text-align:center;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent),
+      var(--bg);
+  }
+
+  .logo-mark {
+    font-size:3rem; letter-spacing:0.2em;
+    font-weight:800; color:white;
+    text-shadow: 0 0 40px rgba(124,58,237,0.6);
+    margin-bottom:0.25rem;
+  }
+
+  .logo-tag {
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.75rem; color:var(--accent2);
+    letter-spacing:0.3em; margin-bottom:3rem;
+  }
+
+  .hero-line {
+    font-size:clamp(2rem,5vw,3.5rem);
+    font-weight:800; line-height:1.1;
+    max-width:700px; margin-bottom:1rem;
+  }
+
+  .hero-line span { color:var(--accent); }
+
+  .hero-sub {
+    color:var(--muted); font-size:1rem;
+    max-width:500px; line-height:1.7;
+    margin-bottom:3rem;
+  }
+
+  .stake-badge {
+    display:inline-flex; align-items:center; gap:0.5rem;
+    background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3);
+    padding:0.4rem 1rem; border-radius:999px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.8rem; color:var(--accent2);
+    margin-bottom:2rem;
+  }
+
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--accent2);
+         animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .case-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:1rem; max-width:900px; width:100%; margin-bottom:3rem;
+  }
+
+  .case-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:1.5rem; cursor:pointer;
+    text-align:left; transition:all 0.2s;
+    position:relative; overflow:hidden;
+  }
+
+  .case-card::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg, var(--accent-color,var(--accent)) 0%, transparent 60%);
+    opacity:0; transition:opacity 0.2s;
+  }
+
+  .case-card:hover { border-color:var(--accent-color,var(--accent)); transform:translateY(-2px); }
+  .case-card:hover::before { opacity:0.07; }
+
+  .case-card[data-case="1"] { --accent-color:#7c3aed; }
+  .case-card[data-case="2"] { --accent-color:#ef4444; }
+  .case-card[data-case="3"] { --accent-color:#06b6d4; }
+
+  .case-num {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.7rem; color:var(--muted);
+    letter-spacing:0.2em; margin-bottom:0.75rem;
+  }
+
+  .case-title { font-size:1.1rem; font-weight:700; margin-bottom:0.5rem; }
+
+  .case-desc { font-size:0.85rem; color:var(--muted); line-height:1.5; margin-bottom:1rem; }
+
+  .case-meta {
+    display:flex; gap:0.75rem; flex-wrap:wrap;
+  }
+
+  .tag {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem; padding:0.2rem 0.6rem;
+    border-radius:4px; letter-spacing:0.05em;
+  }
+
+  .tag-diff { background:rgba(245,158,11,0.15); color:var(--warn); }
+  .tag-stake { background:rgba(34,197,94,0.15); color:var(--success); }
+  .tag-web3 { background:rgba(6,182,212,0.15); color:var(--accent2); }
+
+  /* ══════════════════════════════════════
+     MODE SELECT SCREEN
+  ══════════════════════════════════════ */
+  #mode-select {
+    align-items:center; justify-content:center;
+    padding:2rem; text-align:center;
+  }
+
+  .back-btn {
+    position:fixed; top:1.5rem; left:1.5rem;
+    background:var(--surface); border:1px solid var(--border);
+    color:var(--muted); padding:0.4rem 0.9rem;
+    border-radius:6px; cursor:pointer; font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem; transition:all 0.2s;
+  }
+  .back-btn:hover { color:var(--text); border-color:var(--accent); }
+
+  .mode-title { font-size:1.5rem; font-weight:800; margin-bottom:0.5rem; }
+  .mode-sub { color:var(--muted); font-size:0.9rem; margin-bottom:2.5rem; }
+
+  .stake-box {
+    background:var(--surface); border:1px solid rgba(6,182,212,0.3);
+    border-radius:12px; padding:1.25rem 2rem;
+    font-family:'JetBrains Mono',monospace;
+    margin-bottom:2.5rem; display:inline-block;
+  }
+
+  .stake-label { font-size:0.7rem; color:var(--muted); letter-spacing:0.2em; }
+  .stake-amount { font-size:2rem; color:var(--accent2); font-weight:700; }
+  .stake-win { font-size:0.8rem; color:var(--success); margin-top:0.25rem; }
+
+  .mode-cards {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:1rem; max-width:600px; width:100%;
+    margin-bottom:2rem;
+  }
+
+  .mode-card {
+    background:var(--surface); border:2px solid var(--border);
+    border-radius:12px; padding:2rem 1.5rem;
+    cursor:pointer; transition:all 0.2s; text-align:center;
+  }
+
+  .mode-card:hover { border-color:var(--accent); }
+  .mode-card.selected { border-color:var(--accent); background:rgba(124,58,237,0.1); }
+
+  .mode-icon { font-size:2.5rem; margin-bottom:0.75rem; }
+  .mode-name { font-size:1.1rem; font-weight:700; margin-bottom:0.4rem; }
+  .mode-desc { font-size:0.8rem; color:var(--muted); line-height:1.5; }
+
+  .start-btn {
+    background:var(--accent); color:white;
+    border:none; padding:0.9rem 3rem;
+    border-radius:8px; font-family:'Syne',sans-serif;
+    font-size:1rem; font-weight:700; cursor:pointer;
+    transition:all 0.2s; letter-spacing:0.05em;
+  }
+  .start-btn:hover { background:#6d28d9; transform:translateY(-1px); }
+  .start-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+
+  /* ══════════════════════════════════════
+     GAME SCREEN
+  ══════════════════════════════════════ */
+  #game { flex-direction:row; height:100vh; overflow:hidden; }
+
+  /* LEFT PANEL */
+  .left-panel {
+    width:280px; min-width:280px;
+    background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; padding:1.25rem;
+    overflow-y:auto;
+  }
+
+  .game-logo { font-weight:800; font-size:1.1rem; margin-bottom:1.5rem;
+               color:white; letter-spacing:0.05em; }
+  .game-logo span { color:var(--accent); }
+
+  .info-block { margin-bottom:1.25rem; }
+  .info-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem; color:var(--muted);
+    letter-spacing:0.2em; margin-bottom:0.4rem;
+  }
+  .info-value { font-size:0.9rem; font-weight:600; }
+
+  .divider { height:1px; background:var(--border); margin:1rem 0; }
+
+  .tables-list { list-style:none; }
+  .tables-list li {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem; color:var(--accent2);
+    padding:0.3rem 0;
+    cursor:pointer; transition:color 0.15s;
+  }
+  .tables-list li:hover { color:white; }
+  .tables-list li::before { content:'▸ '; color:var(--muted); }
+
+  .progress-bar {
+    background:var(--border); border-radius:999px;
+    height:4px; margin-top:0.4rem; overflow:hidden;
+  }
+  .progress-fill {
+    height:100%; border-radius:999px;
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    transition:width 0.4s;
+  }
+
+  .hint-btn {
+    margin-top:auto; background:transparent;
+    border:1px solid var(--border); color:var(--muted);
+    padding:0.6rem; border-radius:6px; cursor:pointer;
+    font-family:'Syne',sans-serif; font-size:0.8rem;
+    transition:all 0.2s; width:100%;
+  }
+  .hint-btn:hover { border-color:var(--warn); color:var(--warn); }
+
+  /* MAIN GAME AREA */
+  .main-area {
+    flex:1; display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  /* STORY PANEL */
+  .story-panel {
+    padding:1.25rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(124,58,237,0.05), transparent);
+    max-height:180px; overflow-y:auto;
+  }
+
+  .story-tag {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem; color:var(--accent);
+    letter-spacing:0.2em; margin-bottom:0.5rem;
+  }
+
+  .story-text {
+    font-size:0.88rem; line-height:1.7; color:var(--muted);
+  }
+  .story-text strong { color:var(--text); }
+
+  /* TERMINAL AREA */
+  .terminal-area {
+    flex:1; display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  .output-area {
+    flex:1; padding:1rem 1.5rem;
+    overflow-y:auto; font-family:'JetBrains Mono',monospace;
+    font-size:0.8rem; line-height:1.6;
+  }
+
+  .output-line { margin-bottom:0.25rem; }
+  .output-line.prompt { color:var(--accent2); }
+  .output-line.result { color:var(--text); }
+  .output-line.error { color:var(--danger); }
+  .output-line.success { color:var(--success); }
+  .output-line.info { color:var(--warn); }
+  .output-line.system { color:var(--muted); font-style:italic; }
+
+  .table-output {
+    border-collapse:collapse; width:100%;
+    margin:0.5rem 0; font-size:0.75rem;
+  }
+  .table-output th {
+    background:rgba(124,58,237,0.2); color:var(--accent);
+    padding:0.3rem 0.6rem; text-align:left;
+    border:1px solid var(--border);
+  }
+  .table-output td {
+    padding:0.3rem 0.6rem; border:1px solid var(--border);
+    color:var(--text);
+  }
+  .table-output tr:hover td { background:rgba(124,58,237,0.05); }
+
+  /* INPUT BAR */
+  .input-bar {
+    border-top:1px solid var(--border);
+    padding:0.75rem 1.5rem;
+    display:flex; flex-direction:column; gap:0.5rem;
+  }
+
+  .input-row {
+    display:flex; align-items:center; gap:0.75rem;
+  }
+
+  .sql-prompt {
+    font-family:'JetBrains Mono',monospace;
+    color:var(--accent2); font-size:0.85rem; white-space:nowrap;
+  }
+
+  .sql-input {
+    flex:1; background:var(--code-bg);
+    border:1px solid var(--border); color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:0.85rem;
+    padding:0.5rem 0.75rem; border-radius:6px;
+    outline:none; transition:border-color 0.2s;
+  }
+  .sql-input:focus { border-color:var(--accent); }
+
+  .run-btn {
+    background:var(--accent); color:white; border:none;
+    padding:0.5rem 1.25rem; border-radius:6px;
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:0.85rem; cursor:pointer; transition:all 0.2s;
+    white-space:nowrap;
+  }
+  .run-btn:hover { background:#6d28d9; }
+
+  .answer-row {
+    display:flex; gap:0.5rem;
+  }
+
+  .answer-input {
+    flex:1; background:var(--code-bg);
+    border:1px solid rgba(34,197,94,0.3); color:var(--text);
+    font-family:'Syne',sans-serif; font-size:0.85rem;
+    padding:0.5rem 0.75rem; border-radius:6px; outline:none;
+  }
+  .answer-input::placeholder { color:var(--muted); }
+
+  .submit-btn {
+    background:var(--success); color:white; border:none;
+    padding:0.5rem 1.25rem; border-radius:6px;
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:0.85rem; cursor:pointer; transition:all 0.2s;
+  }
+  .submit-btn:hover { background:#16a34a; }
+
+  /* NORMAL MODE CHOICES */
+  .choices-area {
+    padding:1rem 1.5rem; border-top:1px solid var(--border);
+  }
+  .choice-btn {
+    display:block; width:100%; text-align:left;
+    background:var(--surface); border:1px solid var(--border);
+    color:var(--text); padding:0.6rem 1rem; border-radius:6px;
+    margin-bottom:0.5rem; cursor:pointer; font-family:'Syne',sans-serif;
+    font-size:0.85rem; transition:all 0.2s;
+  }
+  .choice-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* RESULT OVERLAY */
+  .result-overlay {
+    display:none; position:fixed; inset:0; z-index:100;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
+    align-items:center; justify-content:center;
+  }
+  .result-overlay.show { display:flex; }
+
+  .result-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:3rem; text-align:center;
+    max-width:480px; width:90%;
+  }
+
+  .result-icon { font-size:4rem; margin-bottom:1rem; }
+  .result-title { font-size:1.75rem; font-weight:800; margin-bottom:0.5rem; }
+  .result-subtitle { color:var(--muted); margin-bottom:1.5rem; line-height:1.6; }
+
+  .payout-box {
+    background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3);
+    border-radius:8px; padding:1rem; margin-bottom:1.5rem;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .payout-label { font-size:0.7rem; color:var(--muted); letter-spacing:0.2em; }
+  .payout-amount { font-size:2rem; color:var(--success); font-weight:700; }
+
+  .result-btn {
+    background:var(--accent); color:white; border:none;
+    padding:0.75rem 2rem; border-radius:8px;
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:0.9rem; cursor:pointer; margin:0.25rem;
+    transition:all 0.2s;
+  }
+  .result-btn:hover { background:#6d28d9; }
+  .result-btn.secondary {
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+  }
+  .result-btn.secondary:hover { border-color:var(--accent); color:var(--accent); background:transparent; }
+
+  /* STAKE MODAL */
+  .stake-modal {
+    display:none; position:fixed; inset:0; z-index:100;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
+    align-items:center; justify-content:center;
+  }
+  .stake-modal.show { display:flex; }
+
+  .stake-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:2.5rem; text-align:center;
+    max-width:420px; width:90%;
+  }
+
+  .stake-title { font-size:1.4rem; font-weight:800; margin-bottom:0.5rem; }
+  .stake-desc { color:var(--muted); font-size:0.9rem; margin-bottom:2rem; line-height:1.6; }
+
+  .usdc-display {
+    background:var(--code-bg); border:1px solid rgba(6,182,212,0.3);
+    border-radius:12px; padding:1.5rem; margin-bottom:1.5rem;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .usdc-label { font-size:0.7rem; color:var(--muted); letter-spacing:0.2em; margin-bottom:0.25rem; }
+  .usdc-amount { font-size:2.5rem; color:var(--accent2); font-weight:700; }
+  .usdc-win { font-size:0.8rem; color:var(--success); margin-top:0.25rem; }
+
+  .stake-confirm {
+    background:var(--accent2); color:var(--bg); border:none;
+    padding:0.85rem 2.5rem; border-radius:8px;
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:0.95rem; cursor:pointer; width:100%;
+    transition:all 0.2s; margin-bottom:0.5rem;
+  }
+  .stake-confirm:hover { background:#0891b2; }
+
+  .stake-cancel {
+    background:transparent; border:none; color:var(--muted);
+    font-family:'Syne',sans-serif; font-size:0.85rem;
+    cursor:pointer; width:100%; padding:0.5rem;
+  }
+  .stake-cancel:hover { color:var(--text); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  /* RESPONSIVE */
+  @media (max-width:768px) {
+    .left-panel { display:none; }
+    .mode-cards { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LANDING SCREEN
+══════════════════════════════════════ -->
+<div id="landing" class="screen active">
+  <div class="logo-mark">CQ</div>
+  <div class="logo-tag">CASEQUERY // BUILT ON CROO</div>
+
+  <h1 class="hero-line">Stake your USDC.<br>Solve with <span>SQL</span>. Collect.</h1>
+  <p class="hero-sub">
+    Three real murder mystery cases. Two modes. One rule —
+    find the killer using SQL queries, or lose your stake.
+  </p>
+
+  <div class="stake-badge">
+    <span class="dot"></span>
+    LIVE ON CROO AGENT STORE · PAYMENTS VIA CAP PROTOCOL
+  </div>
+
+  <div class="case-grid">
+    <div class="case-card" data-case="1" onclick="selectCase(1)">
+      <div class="case-num">CASE // 001</div>
+      <div class="case-title">The Greenline Double Cross</div>
+      <div class="case-desc">
+        $40,000 chori. Ek murder. Do alag criminals. Ek hi raat.
+        Twin brothers — aur ek tuti hui family.
+      </div>
+      <div class="case-meta">
+        <span class="tag tag-diff">HARD</span>
+        <span class="tag tag-stake">1 USDC → 1.5 USDC</span>
+      </div>
+    </div>
+
+    <div class="case-card" data-case="2" onclick="selectCase(2)">
+      <div class="case-num">CASE // 002</div>
+      <div class="case-title">The Deshpande Murder</div>
+      <div class="case-desc">
+        Suicide laga. Par tha murder. Ek poisoned watch.
+        Ek IPS officer — aur ek zindagi bhar ka dard.
+      </div>
+      <div class="case-meta">
+        <span class="tag tag-diff">MEDIUM</span>
+        <span class="tag tag-stake">1 USDC → 1.5 USDC</span>
+      </div>
+    </div>
+
+    <div class="case-card" data-case="3" onclick="selectCase(3)">
+      <div class="case-num">CASE // 003</div>
+      <div class="case-title">The Ghost Protocol</div>
+      <div class="case-desc">
+        $5M DeFi drain. Ghost_X — identity unknown.
+        Ek cyber officer murdered. Web3 forensics. Aur ek beti ka sacrifice.
+      </div>
+      <div class="case-meta">
+        <span class="tag tag-diff">EXPERT</span>
+        <span class="tag tag-stake">2 USDC → 3 USDC</span>
+        <span class="tag tag-web3">WEB3</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODE SELECT SCREEN
+══════════════════════════════════════ -->
+<div id="mode-select" class="screen">
+  <button class="back-btn" onclick="goBack('landing')">← Back</button>
+
+  <div class="mode-title" id="mode-case-title">Case #001</div>
+  <div class="mode-sub">Choose how you want to investigate</div>
+
+  <div class="stake-box">
+    <div class="stake-label">STAKE REQUIRED</div>
+    <div class="stake-amount" id="stake-display">1 USDC</div>
+    <div class="stake-win" id="win-display">✓ Solve correctly → earn 1.5 USDC</div>
+  </div>
+
+  <div class="mode-cards">
+    <div class="mode-card" id="sql-card" onclick="selectMode('sql')">
+      <div class="mode-icon">💻</div>
+      <div class="mode-name">SQL Mode</div>
+      <div class="mode-desc">Write real SQL queries. Direct database access. Maximum reward multiplier.</div>
+    </div>
+    <div class="mode-card" id="normal-card" onclick="selectMode('normal')">
+      <div class="mode-icon">🔍</div>
+      <div class="mode-name">Detective Mode</div>
+      <div class="mode-desc">Answer guided questions. No SQL needed. Choose clues and suspects.</div>
+    </div>
+  </div>
+
+  <button class="start-btn" id="start-btn" onclick="startGame()" disabled>
+    Stake & Begin Investigation
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     GAME SCREEN
+══════════════════════════════════════ -->
+<div id="game" class="screen">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="game-logo">Case<span>Query</span></div>
+
+    <div class="info-block">
+      <div class="info-label">ACTIVE CASE</div>
+      <div class="info-value" id="panel-case">—</div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-label">MODE</div>
+      <div class="info-value" id="panel-mode">—</div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-label">STAKED</div>
+      <div class="info-value" style="color:var(--accent2)" id="panel-stake">—</div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-label">QUERIES RUN</div>
+      <div class="info-value" id="panel-queries">0</div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-label">PROGRESS</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="info-label">AVAILABLE TABLES</div>
+    <ul class="tables-list" id="tables-list"></ul>
+
+    <div class="divider"></div>
+
+    <button class="hint-btn" onclick="showHint()">💡 Get Hint (costs 0.1 USDC)</button>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+
+    <!-- STORY PANEL -->
+    <div class="story-panel">
+      <div class="story-tag">// CASE BRIEF</div>
+      <div class="story-text" id="story-text"></div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="terminal-area">
+      <div class="output-area" id="output-area">
+        <div class="output-line system">// CaseQuery Terminal v1.0 — CROO Network</div>
+        <div class="output-line system">// Type a SQL query below and press Run</div>
+        <div class="output-line system">// Or submit your final answer when ready</div>
+        <br>
+      </div>
+
+      <!-- SQL MODE INPUT -->
+      <div class="input-bar" id="sql-input-bar">
+        <div class="input-row">
+          <span class="sql-prompt">SQL&gt;</span>
+          <input class="sql-input" id="sql-input" type="text"
+            placeholder="SELECT * FROM suspects;"
+            onkeydown="if(event.key==='Enter') runQuery()">
+          <button class="run-btn" onclick="runQuery()">Run ▶</button>
+        </div>
+        <div class="answer-row">
+          <input class="answer-input" id="answer-input" type="text"
+            placeholder="🎯 Final answer: who is the killer? (e.g. Tim Becker)">
+          <button class="submit-btn" onclick="submitAnswer()">Submit Answer</button>
+        </div>
+      </div>
+
+      <!-- NORMAL MODE INPUT -->
+      <div class="choices-area" id="normal-input-bar" style="display:none">
+        <div id="choices-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STAKE MODAL
+══════════════════════════════════════ -->
+<div class="stake-modal" id="stake-modal">
+  <div class="stake-card">
+    <div style="font-size:2.5rem;margin-bottom:1rem">🔐</div>
+    <div class="stake-title">Stake to Unlock</div>
+    <div class="stake-desc" id="stake-modal-desc">
+      Stake 1 USDC via CROO CAP Protocol to begin your investigation.
+      Solve the case — win 1.5 USDC automatically.
+    </div>
+    <div class="usdc-display">
+      <div class="usdc-label">STAKE AMOUNT</div>
+      <div class="usdc-amount" id="modal-stake-amount">1 USDC</div>
+      <div class="usdc-win" id="modal-win-amount">✓ Win → 1.5 USDC via CAP</div>
+    </div>
+    <button class="stake-confirm" onclick="confirmStake()">
+      ⚡ Confirm Stake via CROO CAP
+    </button>
+    <button class="stake-cancel" onclick="cancelStake()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     RESULT OVERLAY
+══════════════════════════════════════ -->
+<div class="result-overlay" id="result-overlay">
+  <div class="result-card">
+    <div class="result-icon" id="result-icon">🎯</div>
+    <div class="result-title" id="result-title">Case Solved!</div>
+    <div class="result-subtitle" id="result-subtitle"></div>
+    <div class="payout-box" id="payout-box">
+      <div class="payout-label">PAYOUT VIA CAP PROTOCOL</div>
+      <div class="payout-amount" id="payout-amount">+1.5 USDC</div>
+    </div>
+    <div id="result-buttons"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// GAME STATE
+// ════════════════════════════════════════
+const state = {
+  currentCase: null,
+  currentMode: null,
+  queryCount: 0,
+  progress: 0,
+  staked: false,
+  normalStep: 0,
+};
+
+// ════════════════════════════════════════
+// CASE DATA
+// ════════════════════════════════════════
+const CASES = {
+  1: {
+    title: "The Greenline Double Cross",
+    stake: "1 USDC",
+    win: "1.5 USDC",
+    stakeNum: 1,
+    winNum: 1.5,
+    tables: ["suspects","access_logs","alibis","transactions",
+             "cctv_logs","call_logs","delivery_orders",
+             "evidence","psychological_records","family_records"],
+    story: `Raat <strong>20 June 2026</strong>. Greenline Storage, Mumbai.<br>
+            <strong>$40,000</strong> ke electronics gayab. Owner <strong>Mr. Arvind Sharma</strong> — murdered.<br>
+            8 log the us raat. Do alag crimes. Ek hi raat.<br>
+            Pehle chori — phir murder. Dono connected nahi lagte. Par hain.<br>
+            <em>Dhundo — kaun tha asli mastermind?</em>`,
+    answers: ["tim becker","tom becker","tim","tom"],
+    correctAnswer: "Tim Becker (murder) aur Tom Becker (chori)",
+    hints: [
+      "CCTV mein Tom 2 baar dikh raha hai — par dono baar alag lag raha hai. Height check karo.",
+      "Pizza order dekho — delivery_orders table. Address suspicious hai.",
+      "psychological_records table check karo — koi mentally ill tha."
+    ],
+    normalSteps: [
+      {
+        question: "Tum Greenline Storage pahunche ho. Pehle kya check karoge?",
+        choices: [
+          {text: "CCTV footage dekho", action: "cctv"},
+          {text: "Suspects se poochho", action: "suspects"},
+          {text: "Warehouse floor inspect karo", action: "warehouse"},
+        ]
+      },
+      {
+        question: "CCTV mein ek anomaly mili — Tom Becker 2 baar andar gaya, dono baar alag height. Aage kya?",
+        choices: [
+          {text: "Tom Becker ko arrest karo", action: "wrong"},
+          {text: "Twin check karo — kya Tom ka koi twin hai?", action: "twin"},
+          {text: "Height measurement compare karo", action: "height"},
+        ]
+      },
+      {
+        question: "Tom ka twin — Tim Becker — identified. Motive kya ho sakta hai?",
+        choices: [
+          {text: "Psychological records check karo", action: "psych"},
+          {text: "Family history dekho", action: "family"},
+          {text: "Seedha Tim ko pakdo", action: "wrong2"},
+        ]
+      },
+      {
+        question: "Tim ko Paranoid Schizophrenia tha. Sharma se connection?",
+        choices: [
+          {text: "Family records — maa ka angle dekho", action: "maa"},
+          {text: "Bas itna kaafi hai — Tim guilty hai", action: "partial"},
+          {text: "Delivery orders bhi check karo", action: "pizza"},
+        ]
+      },
+      {
+        question: "Tim ki maa — Sharma ki wajah se ghar se nikali gayi thi. Evidence complete. Killer kaun?",
+        choices: [
+          {text: "Tim Becker — murder", action: "solve_murder"},
+          {text: "Tom Becker — murder", action: "wrong3"},
+          {text: "Dono — alag alag crimes", action: "solve_both"},
+        ]
+      }
+    ]
+  },
+  2: {
+    title: "The Deshpande Murder",
+    stake: "1 USDC",
+    win: "1.5 USDC",
+    stakeNum: 1,
+    winNum: 1.5,
+    tables: ["suspects","access_logs","watch_evidence","phone_records",
+             "forensic_report","cctv_logs","blackmail_records","background_records"],
+    story: `Mumbai. <strong>Rohini Deshmukh</strong> — dead. Pehle suicide laga.<br>
+            Par <strong>Omkar Deshmukh</strong> — military officer, victim ka devar — kuch notice kiya.<br>
+            Inspector <strong>Rahul Desai</strong> baar baar apni <strong>ghadi dekh raha tha</strong>.<br>
+            Forensic report aayi — <em>poison itna high level ka tha, normal insaan nahi la sakta.</em><br>
+            Sirf do log la sakte the. Omkar. Ya Rahul.`,
+    answers: ["rahul desai","inspector rahul","rahul","inspector rahul desai"],
+    correctAnswer: "Inspector Rahul Desai",
+    hints: [
+      "Watch evidence check karo — ghadi ka time exactly murder ke waqt ruka tha.",
+      "Phone records dekho — Rohini ne Rahul ko 3 baar call kiya. Kyun?",
+      "Background records — Rahul aur Rohini ka college connection. System ne unhe toda."
+    ],
+    normalSteps: [
+      {
+        question: "Rohini Deshmukh ki maut — pehle suicide laga. Omkar suspicious hai. Kya check karoge?",
+        choices: [
+          {text: "Forensic report dekho", action: "forensic"},
+          {text: "Suicide note padhho", action: "note"},
+          {text: "Witnesses se baat karo", action: "witness"},
+        ]
+      },
+      {
+        question: "Poison — VX Nerve Agent — sirf military ya law enforcement la sakta. Do suspect: Omkar ya Rahul. Aage?",
+        choices: [
+          {text: "Omkar ko pakdo — military hai", action: "wrong"},
+          {text: "Rahul ki ghadi dekho", action: "watch"},
+          {text: "CCTV check karo", action: "cctv"},
+        ]
+      },
+      {
+        question: "Rahul ki ghadi — time exactly Rohini ki maut ke waqt ruka. Needle mili ghadi mein. Motive?",
+        choices: [
+          {text: "Phone records — kya Rohini ne Rahul ko call kiya tha?", action: "phone"},
+          {text: "Bas ghadi kaafi hai — arrest karo", action: "partial"},
+          {text: "Background check karo", action: "background"},
+        ]
+      },
+      {
+        question: "Rohini ne 3 baar blackmail kiya Rahul ko. Background mein — dono ka purana pyaar, system ne toda. Killer?",
+        choices: [
+          {text: "Inspector Rahul Desai", action: "solve"},
+          {text: "Omkar Deshmukh", action: "wrong2"},
+          {text: "Mrs. Desai", action: "wrong3"},
+        ]
+      }
+    ]
+  },
+  3: {
+    title: "The Ghost Protocol",
+    stake: "2 USDC",
+    win: "3 USDC",
+    stakeNum: 2,
+    winNum: 3,
+    tables: ["suspects","transactions","smart_contracts","croo_agent_store",
+             "dark_web_messages","wallet_connections","nexvault_victims",
+             "evidence","diary_entries","vikram_case_files"],
+    story: `Mumbai. 2026. <strong>NexVault DeFi Protocol — $5M drain</strong>.<br>
+            <strong>Ghost_X</strong> — identity unknown. 10,000 victims. On-chain trail — 47 wallets.<br>
+            CROO Agent Store pe ek anonymous mixing agent — <strong>"ShadowMix"</strong>.<br>
+            Cyber Cell Officer <strong>Vikram Malhotra</strong> investigate kar raha tha.<br>
+            <em>Phir — woh bhi murder ho gaya. Suicide likha tha. Par handwriting match nahi ki.</em><br>
+            <strong>Ghost_X dhundho. Aur Vikram ka killer bhi.</strong>`,
+    answers: ["aryan malhotra","joi sharma","aryan and joi","aryan + joi",
+              "aryan","both","aryan malhotra and joi sharma"],
+    correctAnswer: "Ghost_X = Aryan Malhotra + Joi Sharma. Vikram's killer = Aryan Malhotra.",
+    hints: [
+      "croo_agent_store dekho — ShadowMix ka wallet address kaun hai?",
+      "dark_web_messages ka timing dekho — hack #47 mein server location alag tha. MUMBAI.",
+      "transactions mein — maa ka exact amount anonymously wapas gaya. Personal connection tha."
+    ],
+    normalSteps: [
+      {
+        question: "$5M drain. Ghost_X kahan se operate karta hai? Pehle kya check karoge?",
+        choices: [
+          {text: "Smart contract vulnerability dekho", action: "contract"},
+          {text: "Transaction trail follow karo", action: "tx"},
+          {text: "CROO Agent Store check karo", action: "croo"},
+        ]
+      },
+      {
+        question: "ShadowMix — CROO pe registered — 5 din pehle hack se. Wallet: 0x4e1d7f8a. Aage?",
+        choices: [
+          {text: "'Too easy' messages ka pattern dekho", action: "tooeasy"},
+          {text: "Wallet connections trace karo", action: "wallet"},
+          {text: "NexVault victims list dekho", action: "victims"},
+        ]
+      },
+      {
+        question: "47 messages — EU server — 180 seconds delay. Hack #47 — MUMBAI — 167 seconds. 13 second fark. Kya matlab?",
+        choices: [
+          {text: "Ghost_X Mumbai mein tha us raat", action: "mumbai"},
+          {text: "Server glitch tha", action: "wrong"},
+          {text: "Red herring hai", action: "wrong2"},
+        ]
+      },
+      {
+        question: "Maa ka paisa — exact amount — anonymously wapas. Personal connection. Wallet fingerprint?",
+        choices: [
+          {text: "Wallet college fees se connect karo", action: "college"},
+          {text: "KYC records check karo", action: "kyc"},
+          {text: "Vikram ke deleted files dekho", action: "vikram"},
+        ]
+      },
+      {
+        question: "Vikram ke deleted files — 'Co-conspirator = Aryan Malhotra — my son.' Ghost_X kaun hai?",
+        choices: [
+          {text: "Aryan Malhotra + Joi Sharma — dono Ghost_X", action: "solve"},
+          {text: "Sirf Joi Sharma", action: "partial"},
+          {text: "Dev Kapoor — red herring tha woh", action: "wrong3"},
+        ]
+      }
+    ]
+  }
+};
+
+// ════════════════════════════════════════
+// SIMULATED DATABASE
+// ════════════════════════════════════════
+const DB = {
+  1: {
+    suspects: [
+      {id:1,name:"Tom Becker",role:"Warehouse Manager",has_key_access:1,twin_id:2,actual_height:"6'1\"",distinguishing_features:"No facial scars"},
+      {id:2,name:"Tim Becker",role:"Tom ka Twin",has_key_access:1,twin_id:1,actual_height:"5'11\"",distinguishing_features:"Left eye scar"},
+      {id:3,name:"Maria Chen",role:"Driver",has_key_access:1,twin_id:null,actual_height:"5'4\"",distinguishing_features:"None"},
+      {id:4,name:"Raj Patel",role:"Security Guard",has_key_access:1,twin_id:null,actual_height:"5'8\"",distinguishing_features:"None"},
+      {id:5,name:"Lena Ortiz",role:"Office Clerk",has_key_access:0,twin_id:null,actual_height:"5'3\"",distinguishing_features:"None"},
+      {id:6,name:"Vikram Malhotra",role:"Accountant",has_key_access:1,twin_id:null,actual_height:"5'9\"",distinguishing_features:"None"},
+      {id:7,name:"Neha Sharma",role:"Owner ki Beti",has_key_access:1,twin_id:null,actual_height:"5'5\"",distinguishing_features:"None"},
+      {id:8,name:"Sam Wu",role:"Night Janitor",has_key_access:0,twin_id:null,actual_height:"5'6\"",distinguishing_features:"None"},
+    ],
+    access_logs: [
+      {id:1,suspect_id:1,entry_time:"2026-06-20 23:05",exit_time:"2026-06-20 23:15",location:"Office"},
+      {id:2,suspect_id:3,entry_time:"2026-06-20 21:45",exit_time:"2026-06-20 22:15",location:"Warehouse Floor"},
+      {id:3,suspect_id:4,entry_time:"2026-06-20 21:00",exit_time:"2026-06-20 23:30",location:"Loading Dock"},
+      {id:4,suspect_id:6,entry_time:"2026-06-20 21:30",exit_time:"2026-06-20 22:45",location:"Office"},
+      {id:5,suspect_id:7,entry_time:"2026-06-20 22:30",exit_time:"2026-06-20 23:00",location:"Parking+Office"},
+      {id:6,suspect_id:8,entry_time:"2026-06-20 22:00",exit_time:"2026-06-20 22:30",location:"Office"},
+    ],
+    cctv_logs: [
+      {id:1,suspect_name:"Tom Becker",entry_time:"2026-06-20 23:05",exit_time:"2026-06-20 23:15",height_estimate:"6'1\"",facial_features:"No facial scars"},
+      {id:2,suspect_name:"Tom Becker",entry_time:"2026-06-20 23:30",exit_time:"2026-06-20 23:35",height_estimate:"5'11\"",facial_features:"LEFT EYE SCAR ⚠️"},
+    ],
+    transactions: [
+      {id:1,suspect_id:3,transaction_date:"2026-06-21",amount:10000,description:"Cash deposit"},
+      {id:2,suspect_id:1,transaction_date:"2026-06-21",amount:5000,description:"Anonymous transfer"},
+      {id:3,suspect_id:5,transaction_date:"2026-06-20",amount:2000,description:"Consulting fee"},
+    ],
+    call_logs: [
+      {id:1,caller_id:1,receiver_id:4,call_time:"2026-06-20 18:00",duration_minutes:4,notes:"Tom→Raj: CCTV band karna"},
+      {id:2,caller_id:1,receiver_id:3,call_time:"2026-06-20 18:30",duration_minutes:6,notes:"Tom→Maria: Aaj raat aana"},
+      {id:3,caller_id:1,receiver_id:5,call_time:"2026-06-20 19:00",duration_minutes:2,notes:"Tom→Lena: Deal confirm"},
+    ],
+    delivery_orders: [
+      {id:1,ordered_by:"T. Becker",delivery_time:"2026-06-20 23:50",delivery_address:"Greenline Storage ⚠️",item:"1 Pizza",status:"Undelivered - delivery boy fled"},
+    ],
+    evidence: [
+      {id:1,suspect_id:2,evidence_type:"Poison Vial",description:"Sam Wu ki pocket mein mili - Tim ki fingerprints",found_at:"Parking lot"},
+      {id:2,suspect_id:2,evidence_type:"CCTV Anomaly",description:"Height 5'11\" + Left eye scar — Tom nahi tha!",found_at:"CCTV footage"},
+      {id:3,suspect_id:1,evidence_type:"Pizza Order",description:"T.Becker — Greenline address — crime time",found_at:"Delivery records"},
+    ],
+    psychological_records: [
+      {id:1,suspect_id:2,diagnosis:"Paranoid Schizophrenia",last_visit:"2026-01-15",medication:"Risperidone - DISCONTINUED",doctor_notes:"Patient believes Sharma destroyed his family. URGENT.",crisis_calls:3},
+    ],
+    family_records: [
+      {id:1,member_id:2,member_name:"Tim Becker",relationship:"Twin Brother",photo_status:"BURNED - self inflicted",last_contact:"2019-03-12",notes:"'Main is family ka hissa nahi hoon'"},
+      {id:2,member_id:0,member_name:"Priya Becker (Maa)",relationship:"Mother",photo_status:"Intact",last_contact:"2000-01-01",notes:"Sharma ki wajah se ghar se nikaali — 3 saal baad mari"},
+    ],
+    alibis: [
+      {id:1,suspect_id:1,claimed_location:"Home",claimed_time_range:"22:00-onwards",verified_by:"Nehal (wife)"},
+      {id:2,suspect_id:3,claimed_location:"Home",claimed_time_range:"21:30-23:30",verified_by:"Unverified ⚠️"},
+      {id:3,suspect_id:4,claimed_location:"Loading Dock",claimed_time_range:"21:00-23:30",verified_by:"CCTV verified"},
+    ],
+  },
+  2: {
+    suspects: [
+      {id:1,name:"Aayush Deshmukh",role:"Husband",height:"5'9\"",background:"Businessman",motive:"None"},
+      {id:2,name:"Rohini Deshmukh",role:"Victim - 2nd Wife",height:"5'4\"",background:"Rahul ki ex-gf",motive:"None - victim"},
+      {id:3,name:"Inspector Rahul Desai",role:"IPS Officer",height:"6'2\"",background:"Rohini ka ex-bf - forced marriage",motive:"Blackmail - career khatam hota ⚠️"},
+      {id:4,name:"Omkar Deshmukh",role:"Military Officer",height:"6'1\"",background:"Aayush ka bhai - case solve kiya",motive:"None"},
+      {id:5,name:"Mrs. Desai",role:"IPS Officer - Rahul ki wife",height:"5'6\"",background:"Senior IPS",motive:"None"},
+    ],
+    watch_evidence: [
+      {id:1,owner_id:3,watch_brand:"Rolex",time_stopped:"23:32 ⚠️",needle_found:1,poison_match:1,notes:"Rahul ki watch — time exactly murder ke waqt ruka — needle poisoned"},
+    ],
+    phone_records: [
+      {id:1,caller_id:2,receiver_id:3,call_time:"2026-06-15 14:00",duration_minutes:8,call_type:"Blackmail","notes":"'Sab bata dungi'"},
+      {id:2,caller_id:2,receiver_id:3,call_time:"2026-06-18 19:00",duration_minutes:12,call_type:"Blackmail",notes:"'IPS wife ko bhi bataungi'"},
+      {id:3,caller_id:2,receiver_id:3,call_time:"2026-06-20 20:00",duration_minutes:5,call_type:"Final warning",notes:"'Kal tak waqt hai'"},
+      {id:4,caller_id:3,receiver_id:2,call_time:"2026-06-20 21:00",duration_minutes:3,call_type:"Outgoing",notes:"Rahul ne milne aane ki baat ki"},
+    ],
+    forensic_report: [
+      {id:1,victim_name:"Rohini Deshmukh",cause_of_death:"Homicide - poison injection",poison_type:"VX Nerve Agent",poison_level:"HIGH - not commercially available ⚠️",who_can_access:"Military ya Law Enforcement only",time_of_death:"23:32"},
+    ],
+    cctv_logs: [
+      {id:1,timestamp:"2026-06-20 23:20",description:"Tall person entered",height_estimate:"6'1\"-6'3\" ⚠️",location:"Main gate"},
+      {id:2,timestamp:"2026-06-20 23:45",description:"Same person exited - walking fast",height_estimate:"6'1\"-6'3\"",location:"Main gate"},
+    ],
+    blackmail_records: [
+      {id:1,blackmailer_id:2,target_id:3,message:"Tune choose kiya career — ab main choose karungi sach",date:"2026-06-15",demand:"Door jao"},
+      {id:2,blackmailer_id:2,target_id:3,message:"Teri IPS wife ko sab pata chal jaayega",date:"2026-06-18",demand:"Rs. 50 lakh"},
+      {id:3,blackmailer_id:2,target_id:3,message:"Kal tak — warna press conference",date:"2026-06-20",demand:"Career khatam"},
+    ],
+    background_records: [
+      {id:1,person_id:3,event_date:"2010-01-01",event:"College",details:"Rahul aur Rohini — pyaar — sapne dekhe saath rehne ke"},
+      {id:2,person_id:3,event_date:"2015-08-01",event:"Forced marriage",details:"Senior IPS Pradhan — 'meri beti se shaadi karo warna remote posting' — Rahul ke paas choice nahi thi"},
+      {id:3,person_id:3,event_date:"2015-08-15",event:"Rohini ko bataya",details:"Rohini toot gayi — 'tune choose kiya career — mujhe nahi'"},
+    ],
+    access_logs: [
+      {id:1,suspect_id:3,entry_time:"2026-06-20 23:20",exit_time:"2026-06-20 23:45",location:"Deshmukh Residence ⚠️",verified:1},
+      {id:2,suspect_id:4,entry_time:"2026-06-20 20:00",exit_time:"2026-06-20 22:00",location:"Deshmukh Residence",verified:1},
+    ],
+    alibis: [
+      {id:1,suspect_id:3,claimed_location:"Home all night",claimed_time:"22:00-onwards",verified_by:"Unverified ⚠️"},
+      {id:2,suspect_id:4,claimed_location:"Left at 22:00",claimed_time:"20:00-22:00",verified_by:"CCTV verified"},
+      {id:3,suspect_id:1,claimed_location:"Home",claimed_time:"All night",verified_by:"Wife confirmed"},
+    ],
+  },
+  3: {
+    suspects: [
+      {id:1,name:"Aryan Malhotra",role:"Coder - Ghost_X Brain",wallet_address:"0x7f3a9b2c",background:"Vikram ka beta — maa ki savings gayi",connection:"Maa ka paisa Rs 8L doob gaya"},
+      {id:2,name:"Joi Sharma",role:"Hacker - Ghost_X Hands",wallet_address:"0x4e1d7f8a",background:"Aryan ka friend — behen ki shaadi ke paise gayi",connection:"Behen ka paisa Rs 5L — shaadi toot gayi"},
+      {id:3,name:"Vikram Malhotra",role:"Cyber Cell Officer - MURDERED",wallet_address:"0x9c2b3d4e",background:"Aryan ka papa — 20 saal service",connection:"Investigating officer"},
+      {id:4,name:"NexVault CEO",role:"DeFi Founder - Asli Villain",wallet_address:"0x2f8e1a9d",background:"Rug pull kiya — $5M liya",connection:"Criminal"},
+      {id:5,name:"Dev Kapoor",role:"Developer - Red Herring",wallet_address:"0x8b3c2e1f",background:"Innocent — Aryan ne frame kiya",connection:"None"},
+    ],
+    transactions: [
+      {id:1,from_wallet:"0x2f8e1a9d",to_wallet:"0x4e1d7f8a",amount:5000000,timestamp:"2026-06-20 00:00",chain:"ETH",type:"Drain",notes:"withdrawAll() — $5M drained ⚠️"},
+      {id:2,from_wallet:"0x4e1d7f8a",to_wallet:"0xSplit001",amount:106382,timestamp:"2026-06-20 00:01",chain:"ETH",type:"Split",notes:"Split 1/47"},
+      {id:5,from_wallet:"0xClean001",to_wallet:"0xMaa001",amount:800000,timestamp:"2026-06-20 04:00",chain:"ETH",type:"Recovery",notes:"EXACT amount — maa ki savings ⚠️ personal connection!"},
+      {id:6,from_wallet:"0xClean002",to_wallet:"0xPriya001",amount:500000,timestamp:"2026-06-20 06:00",chain:"ETH",type:"Recovery",notes:"Behen Priya ki savings wapas"},
+      {id:7,from_wallet:"0x4e1d7f8a",to_wallet:"0xCollege",amount:150000,timestamp:"2024-01-01",chain:"ETH",type:"Education",notes:"Joi Sharma — college fees"},
+      {id:8,from_wallet:"0x7f3a9b2c",to_wallet:"0xCollege",amount:150000,timestamp:"2024-01-01",chain:"ETH",type:"Education",notes:"Aryan Malhotra — same college!"},
+    ],
+    smart_contracts: [
+      {id:1,contract_name:"NexVault",function_name:"withdrawAll()",access_level:"PUBLIC ⚠️",vulnerability:"YES — should be PRIVATE",called_by:"0x4e1d7f8a",called_at:"2026-06-20 00:00"},
+      {id:2,contract_name:"NexVault",function_name:"deposit()",access_level:"PUBLIC",vulnerability:"NO",called_by:"Multiple",called_at:"2024-01-01"},
+    ],
+    croo_agent_store: [
+      {id:1,agent_name:"ShadowMix ⚠️",wallet_address:"0x4e1d7f8a",service_type:"crypto_mixing",fee_usdc:0.01,registration_date:"2026-06-15",total_transactions:47,status:"ACTIVE"},
+      {id:2,agent_name:"LegalSwap",wallet_address:"0x9x9x9x9x",service_type:"token_swap",fee_usdc:0.05,registration_date:"2026-01-01",total_transactions:1250,status:"ACTIVE"},
+    ],
+    dark_web_messages: [
+      {id:1,message:"Too easy.",timestamp:"2026-05-01 14:03",server_location:"EU-West",delay_seconds:180,hack_reference:1},
+      {id:2,message:"Too easy.",timestamp:"2026-05-08 09:03",server_location:"EU-West",delay_seconds:180,hack_reference:2},
+      {id:3,message:"Too easy.",timestamp:"2026-05-15 22:03",server_location:"EU-West",delay_seconds:180,hack_reference:3},
+      {id:47,message:"Too easy.",timestamp:"2026-06-20 00:02",server_location:"MUMBAI ⚠️",delay_seconds:167,hack_reference:47},
+    ],
+    wallet_connections: [
+      {id:1,wallet:"0x4e1d7f8a",connected_to:"ShadowMix Agent ⚠️",relationship:"Agent owner",proof:"CROO records",date:"2026-06-15"},
+      {id:2,wallet:"0x4e1d7f8a",connected_to:"Joi Sharma",relationship:"KYC - exchange",proof:"Binance records",date:"2023-06-01"},
+      {id:3,wallet:"0x7f3a9b2c",connected_to:"Aryan Malhotra",relationship:"KYC - exchange",proof:"Binance records",date:"2023-06-01"},
+      {id:4,wallet:"0x7f3a9b2c",connected_to:"0xMaa001 ⚠️",relationship:"Family transfer — exact savings amount",proof:"Pattern analysis",date:"2026-06-20"},
+    ],
+    nexvault_victims: [
+      {id:1,victim_name:"Aryan ki Maa ⚠️",wallet_address:"0xMaa001",amount_lost:800000,personal_connection:"Aryan Malhotra ki maa — zindagi bhar ki savings"},
+      {id:2,victim_name:"Priya Sharma ⚠️",wallet_address:"0xPriya001",amount_lost:500000,personal_connection:"Joi ki behen — shaadi toot gayi"},
+      {id:3,victim_name:"General Public",wallet_address:"0xPublic",amount_lost:3700000,personal_connection:"9998 aur investors"},
+    ],
+    vikram_case_files: [
+      {id:1,officer:"Vikram Malhotra",date:"2026-06-20",notes:"Ghost_X identified — Mumbai — wallet traced",status:"DELETED ⚠️",deleted_by:"Aryan Malhotra"},
+      {id:2,officer:"Vikram Malhotra",date:"2026-06-21",notes:"ShadowMix = Joi Sharma — CROO records",status:"DELETED ⚠️",deleted_by:"Aryan Malhotra"},
+      {id:3,officer:"Vikram Malhotra",date:"2026-06-22",notes:"Co-conspirator = Aryan Malhotra — MY SON ⚠️",status:"DELETED ⚠️",deleted_by:"Aryan Malhotra"},
+      {id:4,officer:"Vikram Malhotra",date:"2026-06-23",notes:"Going to HQ to report — cannot hide this",status:"DELETED ⚠️",deleted_by:"Aryan Malhotra"},
+    ],
+    diary_entries: [
+      {id:1,author:"Aryan",date:"2026-06-14",entry:"NexVault ne sab le liya. Joi ki behen ki shaadi toot gayi. System ne kuch nahi kiya. Hum karenge.",encrypted:0},
+      {id:2,author:"Aryan",date:"2026-06-15",entry:"ShadowMix CROO pe register kiya. Papa ko pata nahi chalna chahiye.",encrypted:0},
+      {id:4,author:"Vikram",date:"2026-06-23",entry:"Aryan — main jaanta hoon sab. Ek baap hoon pehle — officer baad mein. Maafi — beta. — Papa",encrypted:1},
+    ],
+    evidence: [
+      {id:3,suspect_id:1,evidence_type:"Murder weapon",description:"Chaku — Aryan ki fingerprints",found_at:"Crime scene"},
+      {id:4,suspect_id:1,evidence_type:"Deleted files",description:"Vikram ke files — deleted by Aryan",found_at:"Cyber Cell"},
+    ],
+  }
+};
+
+// ════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack(screen) { showScreen(screen); }
+
+// ════════════════════════════════════════
+// CASE SELECTION
+// ════════════════════════════════════════
+function selectCase(n) {
+  state.currentCase = n;
+  const c = CASES[n];
+  document.getElementById('mode-case-title').textContent = `Case #00${n}: ${c.title}`;
+  document.getElementById('stake-display').textContent = c.stake;
+  document.getElementById('win-display').textContent = `✓ Solve correctly → earn ${c.win}`;
+  document.getElementById('modal-stake-amount').textContent = c.stake;
+  document.getElementById('modal-win-amount').textContent = `✓ Win → ${c.win} via CAP`;
+  state.currentMode = null;
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('start-btn').disabled = true;
+  showScreen('mode-select');
+}
+
+function selectMode(mode) {
+  state.currentMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(mode + '-card').classList.add('selected');
+  document.getElementById('start-btn').disabled = false;
+}
+
+// ════════════════════════════════════════
+// START GAME
+// ════════════════════════════════════════
+function startGame() {
+  document.getElementById('stake-modal').classList.add('show');
+}
+
+function cancelStake() {
+  document.getElementById('stake-modal').classList.remove('show');
+}
+
+function confirmStake() {
+  document.getElementById('stake-modal').classList.remove('show');
+  state.staked = true;
+  state.queryCount = 0;
+  state.progress = 0;
+  state.normalStep = 0;
+  initGame();
+}
+
+function initGame() {
+  const c = CASES[state.currentCase];
+
+  // Panel info
+  document.getElementById('panel-case').textContent = `#00${state.currentCase}: ${c.title.substring(0,20)}...`;
+  document.getElementById('panel-mode').textContent = state.currentMode === 'sql' ? '💻 SQL Mode' : '🔍 Detective Mode';
+  document.getElementById('panel-stake').textContent = c.stake;
+  document.getElementById('panel-queries').textContent = '0';
+  document.getElementById('progress-fill').style.width = '0%';
+
+  // Tables list
+  const list = document.getElementById('tables-list');
+  list.innerHTML = '';
+  c.tables.forEach(t => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    li.onclick = () => showTableHint(t);
+    list.appendChild(li);
+  });
+
+  // Story
+  document.getElementById('story-text').innerHTML = c.story;
+
+  // Output
+  const out = document.getElementById('output-area');
+  out.innerHTML = `
+    <div class="output-line system">// CaseQuery Terminal — CROO Network</div>
+    <div class="output-line success">// ✓ ${c.stake} staked via CAP Protocol</div>
+    <div class="output-line info">// Case #00${state.currentCase}: ${c.title}</div>
+    <div class="output-line system">// Available tables: ${c.tables.join(', ')}</div>
+    <br>
+    <div class="output-line system">// Solve the case. Win ${c.win}. Good luck, Detective.</div>
+    <br>
+  `;
+
+  // Mode-specific UI
+  if (state.currentMode === 'sql') {
+    document.getElementById('sql-input-bar').style.display = 'flex';
+    document.getElementById('normal-input-bar').style.display = 'none';
+    setTimeout(() => document.getElementById('sql-input').focus(), 100);
+  } else {
+    document.getElementById('sql-input-bar').style.display = 'none';
+    document.getElementById('normal-input-bar').style.display = 'block';
+    renderNormalChoices();
+  }
+
+  showScreen('game');
+}
+
+// ════════════════════════════════════════
+// SQL ENGINE
+// ════════════════════════════════════════
+function runQuery() {
+  const input = document.getElementById('sql-input');
+  const query = input.value.trim();
+  if (!query) return;
+
+  state.queryCount++;
+  document.getElementById('panel-queries').textContent = state.queryCount;
+  state.progress = Math.min(90, state.progress + 10);
+  document.getElementById('progress-fill').style.width = state.progress + '%';
+
+  const out = document.getElementById('output-area');
+
+  // Echo query
+  const promptLine = document.createElement('div');
+  promptLine.className = 'output-line prompt';
+  promptLine.textContent = 'SQL> ' + query;
+  out.appendChild(promptLine);
+
+  // Execute
+  try {
+    const results = executeSQL(query);
+    if (results.length === 0) {
+      const noData = document.createElement('div');
+      noData.className = 'output-line system';
+      noData.textContent = '// No results found.';
+      out.appendChild(noData);
+    } else {
+      const table = buildTable(results);
+      out.appendChild(table);
+      const countLine = document.createElement('div');
+      countLine.className = 'output-line system';
+      countLine.textContent = `// ${results.length} row(s) returned`;
+      out.appendChild(countLine);
+    }
+  } catch (e) {
+    const errLine = document.createElement('div');
+    errLine.className = 'output-line error';
+    errLine.textContent = '// Error: ' + e.message;
+    out.appendChild(errLine);
+  }
+
+  const br = document.createElement('br');
+  out.appendChild(br);
+  out.scrollTop = out.scrollHeight;
+  input.value = '';
+  input.focus();
+}
+
+function executeSQL(query) {
+  const q = query.toLowerCase().replace(/\s+/g,' ').trim();
+  const db = DB[state.currentCase];
+
+  // Extract table name
+  const fromMatch = q.match(/from\s+(\w+)/);
+  if (!fromMatch) throw new Error("No FROM clause found");
+
+  const tableName = fromMatch[1];
+  if (!db[tableName]) throw new Error(`Table '${tableName}' not found. Available: ${Object.keys(db).join(', ')}`);
+
+  let rows = [...db[tableName]];
+
+  // WHERE clause (basic)
+  const whereMatch = q.match(/where\s+(.+?)(?:\s+order|\s+limit|\s+group|$)/);
+  if (whereMatch) {
+    const cond = whereMatch[1].trim();
+    rows = rows.filter(row => evalCondition(row, cond));
+  }
+
+  // ORDER BY
+  const orderMatch = q.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
+  if (orderMatch) {
+    const col = orderMatch[1];
+    const dir = orderMatch[2] === 'desc' ? -1 : 1;
+    rows.sort((a, b) => (a[col] > b[col] ? dir : -dir));
+  }
+
+  // LIMIT
+  const limitMatch = q.match(/limit\s+(\d+)/);
+  if (limitMatch) rows = rows.slice(0, parseInt(limitMatch[1]));
+
+  // SELECT columns
+  const selectMatch = q.match(/^select\s+(.+?)\s+from/);
+  if (selectMatch && selectMatch[1].trim() !== '*') {
+    const cols = selectMatch[1].split(',').map(c => c.trim().split('.').pop().split(' as ')[0].trim());
+    rows = rows.map(row => {
+      const r = {};
+      cols.forEach(c => { if (row[c] !== undefined) r[c] = row[c]; });
+      return r;
+    });
+  }
+
+  return rows;
+}
+
+function evalCondition(row, cond) {
+  // Handle AND
+  if (cond.includes(' and ')) {
+    return cond.split(' and ').every(c => evalCondition(row, c.trim()));
+  }
+  // Handle OR
+  if (cond.includes(' or ')) {
+    return cond.split(' or ').some(c => evalCondition(row, c.trim()));
+  }
+
+  // LIKE
+  const likeMatch = cond.match(/(\w+)\s+(?:like|not like)\s+'(.+?)'/);
+  if (likeMatch) {
+    const col = likeMatch[1];
+    const pat = likeMatch[2].replace(/%/g,'.*').toLowerCase();
+    const val = String(row[col] || '').toLowerCase();
+    const matches = new RegExp('^' + pat + '$').test(val);
+    return cond.includes('not like') ? !matches : matches;
+  }
+
+  // = operator
+  const eqMatch = cond.match(/(\w+)\s*=\s*'?([^']+)'?/);
+  if (eqMatch) {
+    const col = eqMatch[1];
+    const val = eqMatch[2].replace(/'/g,'').trim();
+    return String(row[col]) === val || String(row[col]).toLowerCase() === val.toLowerCase();
+  }
+
+  // != operator
+  const neqMatch = cond.match(/(\w+)\s*!=\s*'?([^']+)'?/);
+  if (neqMatch) {
+    const col = neqMatch[1];
+    const val = neqMatch[2].replace(/'/g,'').trim();
+    return String(row[col]) !== val;
+  }
+
+  // > < >= <=
+  const compMatch = cond.match(/(\w+)\s*(>=|<=|>|<)\s*'?([^']+)'?/);
+  if (compMatch) {
+    const col = compMatch[1];
+    const op = compMatch[2];
+    const val = compMatch[3].replace(/'/g,'').trim();
+    const a = isNaN(row[col]) ? row[col] : Number(row[col]);
+    const b = isNaN(val) ? val : Number(val);
+    if (op === '>') return a > b;
+    if (op === '<') return a < b;
+    if (op === '>=') return a >= b;
+    if (op === '<=') return a <= b;
+  }
+
+  // IS NULL / IS NOT NULL
+  if (cond.includes('is not null')) {
+    const col = cond.split('is not null')[0].trim();
+    return row[col] !== null && row[col] !== undefined;
+  }
+  if (cond.includes('is null')) {
+    const col = cond.split('is null')[0].trim();
+    return row[col] === null || row[col] === undefined;
+  }
+
+  return true;
+}
+
+function buildTable(rows) {
+  if (!rows.length) return document.createElement('div');
+  const cols = Object.keys(rows[0]);
+  const table = document.createElement('table');
+  table.className = 'table-output';
+
+  // Header
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  cols.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c;
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  // Body
+  const tbody = document.createElement('tbody');
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      td.textContent = row[c] !== null && row[c] !== undefined ? row[c] : 'NULL';
+      if (td.textContent.includes('⚠️')) td.style.color = 'var(--warn)';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+function showTableHint(tableName) {
+  const db = DB[state.currentCase];
+  if (!db[tableName]) return;
+  const rows = db[tableName];
+  if (!rows.length) return;
+  const out = document.getElementById('output-area');
+  const info = document.createElement('div');
+  info.className = 'output-line info';
+  info.textContent = `// Table: ${tableName} — columns: ${Object.keys(rows[0]).join(', ')}`;
+  out.appendChild(info);
+  out.scrollTop = out.scrollHeight;
+}
+
+// ════════════════════════════════════════
+// ANSWER SUBMISSION
+// ════════════════════════════════════════
+function submitAnswer() {
+  const answer = document.getElementById('answer-input').value.trim();
+  if (!answer) return;
+
+  const c = CASES[state.currentCase];
+  const isCorrect = c.answers.some(a =>
+    answer.toLowerCase().includes(a) || a.includes(answer.toLowerCase())
+  );
+
+  showResult(isCorrect, answer);
+}
+
+function showResult(isCorrect, answer) {
+  const c = CASES[state.currentCase];
+  const overlay = document.getElementById('result-overlay');
+  const icon = document.getElementById('result-icon');
+  const title = document.getElementById('result-title');
+  const subtitle = document.getElementById('result-subtitle');
+  const payoutBox = document.getElementById('payout-box');
+  const btns = document.getElementById('result-buttons');
+
+  if (isCorrect) {
+    icon.textContent = '🎯';
+    title.textContent = 'Case Solved!';
+    title.style.color = 'var(--success)';
+    subtitle.innerHTML = `Sahi jawab: <strong>${c.correctAnswer}</strong><br><br>
+      Tumhara SQL investigation successful raha.
+      CROO CAP Protocol pe payout process ho raha hai.`;
+    payoutBox.style.display = 'block';
+    payoutBox.querySelector('.payout-label').textContent = 'PAYOUT VIA CAP PROTOCOL';
+    document.getElementById('payout-amount').textContent = `+${c.win}`;
+    btns.innerHTML = `
+      <button class="result-btn" onclick="playAgain()">Play Another Case</button>
+      <button class="result-btn secondary" onclick="goHome()">← Home</button>
+    `;
+
+    // Progress complete
+    document.getElementById('progress-fill').style.width = '100%';
+  } else {
+    icon.textContent = '❌';
+    title.textContent = 'Wrong Answer';
+    title.style.color = 'var(--danger)';
+    subtitle.innerHTML = `Yeh sahi nahi tha.<br><br>
+      Tumhara ${c.stake} stake forfeit ho gaya.<br>
+      Aur clues dhundho — ya ek aur case try karo.`;
+    payoutBox.style.display = 'none';
+    btns.innerHTML = `
+      <button class="result-btn" onclick="retryCase()">Try Again (Stake Again)</button>
+      <button class="result-btn secondary" onclick="goHome()">← Home</button>
+    `;
+  }
+
+  // Special ending for case 3
+  if (state.currentCase === 3 && isCorrect) {
+    subtitle.innerHTML += `<br><br>
+      <span style="color:var(--warn)">⚠️ Case partially closed.<br>
+      Vikram Malhotra ka killer — evidence incomplete.<br>
+      Handwriting mismatch. Koi aur sach chhupa hai...</span><br><br>
+      <span style="color:var(--accent)">🔜 PART 2 — COMING SOON</span>`;
+  }
+
+  overlay.classList.add('show');
+}
+
+function playAgain() {
+  document.getElementById('result-overlay').classList.remove('show');
+  showScreen('landing');
+}
+
+function retryCase() {
+  document.getElementById('result-overlay').classList.remove('show');
+  document.getElementById('answer-input').value = '';
+  document.getElementById('stake-modal').classList.add('show');
+}
+
+function goHome() {
+  document.getElementById('result-overlay').classList.remove('show');
+  showScreen('landing');
+}
+
+// ════════════════════════════════════════
+// NORMAL MODE
+// ════════════════════════════════════════
+function renderNormalChoices() {
+  const c = CASES[state.currentCase];
+  if (state.normalStep >= c.normalSteps.length) {
+    showFinalGuess();
+    return;
+  }
+  const step = c.normalSteps[state.normalStep];
+  const container = document.getElementById('choices-container');
+  container.innerHTML = `
+    <div style="color:var(--text);font-size:0.9rem;margin-bottom:0.75rem;font-weight:600">
+      ${step.question}
+    </div>
+  `;
+  step.choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = choice.text;
+    btn.onclick = () => handleChoice(choice);
+    container.appendChild(btn);
+  });
+}
+
+function handleChoice(choice) {
+  const out = document.getElementById('output-area');
+  state.queryCount++;
+  document.getElementById('panel-queries').textContent = state.queryCount;
+  state.progress = Math.min(90, state.progress + 18);
+  document.getElementById('progress-fill').style.width = state.progress + '%';
+
+  const choiceLine = document.createElement('div');
+  choiceLine.className = 'output-line prompt';
+  choiceLine.textContent = '🔍 ' + choice.text;
+  out.appendChild(choiceLine);
+
+  if (choice.action === 'wrong' || choice.action === 'wrong2' ||
+      choice.action === 'wrong3' || choice.action === 'partial') {
+    const wrongLine = document.createElement('div');
+    wrongLine.className = 'output-line error';
+    wrongLine.textContent = '// Dead end. Evidence does not support this. Try another approach.';
+    out.appendChild(wrongLine);
+  } else if (choice.action === 'solve' || choice.action === 'solve_murder' ||
+             choice.action === 'solve_both') {
+    showResult(true, choice.text);
+    return;
+  } else {
+    const clue = getNormalClue(choice.action);
+    const clueLine = document.createElement('div');
+    clueLine.className = 'output-line result';
+    clueLine.innerHTML = clue;
+    out.appendChild(clueLine);
+    state.normalStep++;
+  }
+
+  const br = document.createElement('br');
+  out.appendChild(br);
+  out.scrollTop = out.scrollHeight;
+  renderNormalChoices();
+}
+
+function getNormalClue(action) {
+  const clues = {
+    cctv: "📷 CCTV footage mein anomaly mili — ek hi raat mein Tom Becker 2 baar andar gaya. Par dono baar height alag thi!",
+    suspects: "👥 8 suspects identified. Har kisi ka kuch na kuch reason tha wahan hone ka.",
+    warehouse: "🏭 Warehouse Floor pe maal missing — $40,000 worth. Entry log mein sirf ek suspect tha.",
+    twin: "👬 Records show: Tom Becker has a twin — TIM BECKER. Tim — kahan tha us raat?",
+    height: "📏 CCTV 23:30 pe — height 5'11\". Tom ki actual height: 6'1\". 2 inch mismatch! Yeh Tom nahi tha.",
+    psych: "🧠 Medical records: Tim Becker — Paranoid Schizophrenia. Medication discontinued. Crisis calls — 3 baar. No response.",
+    family: "👨‍👩‍👦 Family records: Tim ne photo mein apna hissa jalaya tha — 2019. 'Main is family ka hissa nahi hoon.'",
+    maa: "💔 Priya Becker — Tim ki maa — Sharma ki wajah se ghar se nikali gayi thi. 3 saal baad akele mar gayi.",
+    pizza: "🍕 Delivery orders: T. Becker — Greenline Storage address — crime time 23:50. Delivery boy fled!",
+    forensic: "🔬 Forensic report: Homicide. Poison — VX Nerve Agent. Not commercially available. Military ya Law Enforcement only.",
+    note: "📝 Suicide note — handwriting analysis pending. Par angle suspicious hai.",
+    witness: "👁️ Omkar Deshmukh noticed — Inspector Rahul baar baar apni ghadi dekh raha tha. Nervously.",
+    watch: "⌚ Watch evidence: Rahul ki Rolex — time stuck at 23:32 — exactly murder time. Needle found — poisoned!",
+    cctv2: "📷 Tall person — 6'1\"-6'3\" — entered at 23:20, left at 23:45. Rahul ki height: 6'2\". Match!",
+    phone: "📱 Phone records: Rohini ne Rahul ko 3 baar call kiya — blackmail. Rahul ne callback kiya — milne aaya.",
+    background: "📋 Background: Rahul aur Rohini — college pyaar. System ne forced marriage karwai. Rohini toot gayi.",
+    contract: "💻 Smart contract: withdrawAll() — PUBLIC access. Should be PRIVATE. Deliberate vulnerability!",
+    tx: "💸 $5M — 47 wallets mein split — 47 seconds mein. ShadowMix agent use kiya mixing ke liye.",
+    croo: "🤖 CROO Agent Store: 'ShadowMix' — wallet 0x4e1d7f8a — crypto mixing — registered 5 din pehle hack se!",
+    tooeasy: "💬 47 hacks — 47 'Too easy' messages. Hack #47 — MUMBAI server — 167 seconds. 13 second anomaly!",
+    wallet: "🔗 Wallet 0x4e1d7f8a — ShadowMix owner — Joi Sharma — Binance KYC confirmed.",
+    victims: "💔 Victims list: Aryan ki Maa (Rs 8L), Priya Sharma (Rs 5L). Both got money back anonymously!",
+    mumbai: "📍 Ghost_X was in Mumbai that night. ISP records → one connection → Vikram's address area.",
+    college: "🎓 Both wallets paid fees to same college — same year. Aryan + Joi — classmates!",
+    kyc: "🪪 KYC: 0x4e1d7f8a = Joi Sharma. 0x7f3a9b2c = Aryan Malhotra. Same college, same victims.",
+    vikram: "🗂️ Vikram's files — DELETED by Aryan Malhotra. Last entry: 'Co-conspirator = Aryan Malhotra — MY SON'",
+  };
+  return clues[action] || "// Clue found. Investigate further.";
+}
+
+function showFinalGuess() {
+  const container = document.getElementById('choices-container');
+  container.innerHTML = `
+    <div style="color:var(--success);font-size:0.9rem;margin-bottom:0.75rem;font-weight:600">
+      🎯 All clues gathered. Who is the killer?
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+      <input id="normal-answer" class="answer-input" style="flex:1"
+        type="text" placeholder="Enter killer's name...">
+      <button class="submit-btn" onclick="submitNormalAnswer()">Submit</button>
+    </div>
+  `;
+}
+
+function submitNormalAnswer() {
+  const answer = document.getElementById('normal-answer').value.trim();
+  if (!answer) return;
+  const c = CASES[state.currentCase];
+  const isCorrect = c.answers.some(a =>
+    answer.toLowerCase().includes(a) || a.includes(answer.toLowerCase())
+  );
+  showResult(isCorrect, answer);
+}
+
+// ════════════════════════════════════════
+// HINTS
+// ════════════════════════════════════════
+function showHint() {
+  const c = CASES[state.currentCase];
+  const hintIdx = Math.min(state.queryCount > 5 ? 2 : state.queryCount > 2 ? 1 : 0, c.hints.length-1);
+  const out = document.getElementById('output-area');
+  const line = document.createElement('div');
+  line.className = 'output-line info';
+  line.textContent = '💡 HINT: ' + c.hints[hintIdx];
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('result-overlay').classList.remove('show');
+    document.getElementById('stake-modal').classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>
