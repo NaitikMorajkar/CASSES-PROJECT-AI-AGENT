@@ -1,0 +1,189 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaseQuery Chatbot</title>
+<style>
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 5px #00ff41,0 0 10px #00ff4133}50%{box-shadow:0 0 20px #00ff41,0 0 40px #00ff4133}}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:0.6}50%{transform:scale(1.08);opacity:0.3}100%{transform:scale(1);opacity:0.6}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes blink{0%,100%{border-color:#00ff41}50%{border-color:transparent}}
+@keyframes matrixRain{0%{transform:translateY(-100%);opacity:1}100%{transform:translateY(100vh);opacity:0}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes successPop{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes bounce1{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+@keyframes bounce2{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}}
+@keyframes bounce3{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+@keyframes borderGlow{0%{border-color:#00ff41}50%{border-color:#00ff41aa}100%{border-color:#00ff41}}
+@keyframes splashFadeOut{0%{opacity:1}100%{opacity:0;pointer-events:none}}
+@keyframes logoScale{0%{transform:scale(0) rotate(-180deg);opacity:0}60%{transform:scale(1.2) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
+@keyframes logoGlow{0%,100%{filter:drop-shadow(0 0 10px #00ff41) drop-shadow(0 0 20px #00ff4133)}50%{filter:drop-shadow(0 0 30px #00ff41) drop-shadow(0 0 60px #00ff4155)}}
+@keyframes titleReveal{0%{opacity:0;letter-spacing:20px;filter:blur(10px)}100%{opacity:1;letter-spacing:6px;filter:blur(0)}}
+@keyframes subtitleReveal{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes loadingBar{0%{width:0}100%{width:100%}}
+@keyframes statusBlink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes hexFloat{0%{transform:translateY(0) scale(1);opacity:0.3}50%{transform:translateY(-20px) scale(1.1);opacity:0.6}100%{transform:translateY(0) scale(1);opacity:0.3}}
+@keyframes ringPulse{0%{transform:scale(0.8);opacity:0.8;border-color:#00ff41}50%{transform:scale(1.5);opacity:0;border-color:#00ff4100}100%{transform:scale(0.8);opacity:0;border-color:#00ff4100}}
+@keyframes magnifierSwing{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.03) 2px,rgba(0,255,65,0.03) 4px);pointer-events:none;z-index:9999}
+
+.splash{position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;transition:all 0.8s cubic-bezier(0.4,0,0.2,1)}
+.splash.hidden{animation:splashFadeOut 0.8s forwards}
+.splash .splash-bg{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden}
+.splash .hex{position:absolute;font-size:12px;color:#00ff41;opacity:0.3;animation:hexFloat 3s ease-in-out infinite}
+.splash .logo-container{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:24px}
+.splash .rings{position:relative;width:160px;height:160px}
+.splash .rings .ring{position:absolute;top:0;left:0;width:100%;height:100%;border:2px solid #00ff41;border-radius:50%;animation:ringPulse 2s ease-out infinite}
+.splash .rings .ring:nth-child(2){animation-delay:0.5s}
+.splash .rings .ring:nth-child(3){animation-delay:1s}
+.splash .logo{position:relative;width:120px;height:120px;margin:20px;animation:logoScale 1s cubic-bezier(0.4,0,0.2,1) forwards,logoGlow 2s ease-in-out infinite 1s;cursor:pointer;transition:transform 0.3s}
+.splash .logo:hover{transform:scale(1.15)}
+.splash .logo svg{width:100%;height:100%}
+.splash .title{font-size:32px;font-weight:bold;letter-spacing:6px;background:linear-gradient(90deg,#00ff41,#00cc33,#00ff41,#00cc33);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:titleReveal 1.2s ease-out 0.5s both}
+.splash .subtitle{font-size:13px;color:#888;letter-spacing:4px;animation:subtitleReveal 0.8s ease-out 1s both}
+.splash .terminal{margin-top:30px;background:#111;border:1px solid #333;border-radius:8px;padding:16px 24px;width:400px;max-width:90vw;animation:subtitleReveal 0.8s ease-out 1.3s both}
+.splash .terminal-header{display:flex;gap:6px;margin-bottom:12px}
+.splash .terminal-dot{width:10px;height:10px;border-radius:50%}
+.splash .terminal-dot:nth-child(1){background:#ff5f56}
+.splash .terminal-dot:nth-child(2){background:#ffbd2e}
+.splash .terminal-dot:nth-child(3){background:#27c93f}
+.splash .terminal-body{font-size:12px;line-height:1.8}
+.splash .terminal-line{color:#888;opacity:0;animation:subtitleReveal 0.3s ease-out forwards}
+.splash .terminal-line:nth-child(1){animation-delay:1.5s}
+.splash .terminal-line:nth-child(2){animation-delay:1.8s}
+.splash .terminal-line:nth-child(3){animation-delay:2.1s}
+.splash .terminal-line:nth-child(4){animation-delay:2.4s}
+.splash .terminal-line .green{color:#00ff41}
+.splash .terminal-line .yellow{color:#ffd700}
+.splash .terminal-line .cursor{display:inline-block;width:8px;height:14px;background:#00ff41;animation:statusBlink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+.splash .loading{margin-top:20px;width:200px;animation:subtitleReveal 0.8s ease-out 2.5s both}
+.splash .loading-bar{height:3px;background:#222;border-radius:2px;overflow:hidden}
+.splash .loading-bar-fill{height:100%;background:linear-gradient(90deg,#00ff41,#00cc33);border-radius:2px;animation:loadingBar 2s ease-out 2.8s forwards;width:0}
+.splash .loading-text{font-size:11px;color:#555;text-align:center;margin-top:8px;animation:statusBlink 1.5s ease-in-out infinite}
+.splash .enter-btn{margin-top:24px;background:linear-gradient(135deg,#00ff41,#00cc33);color:#000;border:none;padding:12px 40px;font-family:inherit;font-size:14px;font-weight:bold;letter-spacing:2px;border-radius:8px;cursor:pointer;opacity:0;transition:all 0.3s;position:relative;overflow:hidden}
+.splash .enter-btn.show{animation:subtitleReveal 0.5s ease-out forwards}
+.splash .enter-btn:hover{transform:translateY(-2px);box-shadow:0 4px 20px #00ff4144}
+.splash .enter-btn:active{transform:scale(0.95)}
+
+.app-container{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.app-container.visible{display:flex;animation:fadeIn 0.5s ease-out}
+.matrix-bg{position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:0;opacity:0.07}
+.matrix-col{position:absolute;top:-100%;font-size:14px;color:#00ff41;animation:matrixRain linear infinite;white-space:nowrap}
+.header{position:relative;z-index:1;background:linear-gradient(180deg,#111 0%,#0a0a0a 100%);border-bottom:2px solid #00ff41;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;animation:fadeIn 0.5s ease-out}
+.header::after{content:'';position:absolute;bottom:-2px;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,#00ff41,#00ff41,transparent);animation:borderGlow 3s infinite}
+.header h1{font-size:16px;letter-spacing:3px;background:linear-gradient(90deg,#00ff41,#00cc33,#00ff41);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:float 3s ease-in-out infinite}
+.header .badge{background:linear-gradient(135deg,#00ff41,#00cc33);color:#000;padding:3px 10px;font-size:10px;font-weight:bold;border-radius:20px;animation:pulse-ring 2s infinite;box-shadow:0 0 10px #00ff4166}
+.case-select{position:relative;z-index:1;padding:10px 24px;background:linear-gradient(180deg,#111,#0d0d0d);border-bottom:1px solid #333;display:flex;gap:10px;align-items:center;animation:fadeIn 0.6s ease-out}
+.case-select label{font-size:12px;color:#888}
+.case-select select{background:#1a1a1a;border:1px solid #333;color:#00ff41;padding:6px 10px;font-family:inherit;border-radius:6px;transition:all 0.3s;cursor:pointer}
+.case-select select:focus{outline:none;border-color:#00ff41;box-shadow:0 0 10px #00ff4133}
+.case-select select:hover{border-color:#00ff41}
+.chat{position:relative;z-index:1;flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:80%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;animation:slideUp 0.3s ease-out}
+.msg.bot{background:linear-gradient(135deg,#1a1a1a,#222);border:1px solid #333;color:#ccc;align-self:flex-start;animation:slideInLeft 0.3s ease-out}
+.msg.user{background:linear-gradient(135deg,#002200,#003300);border:1px solid #00ff41;color:#00ff41;align-self:flex-end;animation:slideInRight 0.3s ease-out;box-shadow:0 0 10px #00ff4122}
+.msg.error{background:linear-gradient(135deg,#1a0000,#220000);border:1px solid #ff4444;color:#ff4444;animation:shake 0.5s ease-out}
+.msg.info{background:linear-gradient(135deg,#0a0a1a,#111);border:1px solid #444;color:#888;align-self:center;font-size:11px;border-radius:20px}
+.msg pre{white-space:pre-wrap;margin:6px 0 0 0}
+.msg table{border-collapse:collapse;margin:8px 0;width:100%}
+.msg th{background:linear-gradient(135deg,#222,#1a1a1a);padding:6px 10px;text-align:left;border:1px solid #444;font-size:11px;color:#00ff41}
+.msg td{padding:5px 10px;border:1px solid #333;font-size:11px;transition:background 0.2s}
+.msg tr:hover td{background:#0a1a0a}
+.typing{display:flex;gap:4px;padding:10px 14px;background:linear-gradient(135deg,#1a1a1a,#222);border:1px solid #333;border-radius:10px;align-self:flex-start;animation:slideInLeft 0.3s ease-out}
+.typing span{width:8px;height:8px;background:#00ff41;border-radius:50%;animation:bounce1 1.2s infinite}
+.typing span:nth-child(2){animation:bounce2 1.2s infinite 0.15s}
+.typing span:nth-child(3){animation:bounce3 1.2s infinite 0.3s}
+.input-row{position:relative;z-index:1;padding:12px 20px;background:linear-gradient(180deg,#111,#0d0d0d);border-top:1px solid #333;display:flex;gap:10px;animation:slideUp 0.5s ease-out}
+.input-row input{flex:1;background:#1a1a1a;border:1px solid #333;color:#00ff41;padding:10px 14px;font-family:inherit;font-size:13px;border-radius:8px;transition:all 0.3s}
+.input-row input:focus{outline:none;border-color:#00ff41;box-shadow:0 0 15px #00ff4122}
+.input-row button{background:linear-gradient(135deg,#00ff41,#00cc33);color:#000;border:none;padding:10px 20px;font-family:inherit;font-weight:bold;border-radius:8px;cursor:pointer;transition:all 0.3s}
+.input-row button:hover{transform:translateY(-1px);box-shadow:0 4px 15px #00ff4144}
+.hint{position:relative;z-index:1;padding:6px 20px;background:#0d0d0d;border-top:1px solid #222;font-size:11px;color:#555;animation:fadeIn 0.7s ease-out}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#00ff41}
+</style>
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="splash-bg" id="splash-bg"></div>
+  <div class="logo-container">
+    <div class="rings"><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+    <div class="logo" onclick="enterApp()" style="cursor:pointer">
+      <svg viewBox="0 0 120 120" fill="none">
+        <circle cx="50" cy="50" r="35" stroke="#00ff41" stroke-width="4" fill="none" style="animation:magnifierSwing 2s ease-in-out infinite;transform-origin:50px 50px"/>
+        <line x1="75" y1="75" x2="105" y2="105" stroke="#00ff41" stroke-width="5" stroke-linecap="round"/>
+        <text x="50" y="48" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="18" font-weight="bold">SQL</text>
+        <text x="50" y="65" text-anchor="middle" fill="#ffd700" font-family="Courier New" font-size="9">SELECT *</text>
+        <circle cx="50" cy="50" r="38" stroke="#00ff4122" stroke-width="1" fill="none">
+          <animate attributeName="r" values="38;45;38" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    <div class="title">CASEQUERY</div>
+    <div class="subtitle">SQL CHATBOT ASSISTANT</div>
+    <div class="terminal">
+      <div class="terminal-header"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div></div>
+      <div class="terminal-body">
+        <div class="terminal-line"><span class="green">$</span> initializing chatbot_agent <span class="green">v2.0</span>...</div>
+        <div class="terminal-line"><span class="green">$</span> loading NLP engine... <span class="yellow">ready</span></div>
+        <div class="terminal-line"><span class="green">$</span> connecting to <span class="yellow">CROO Testnet</span>...</div>
+        <div class="terminal-line"><span class="green">$</span> AI Assistant: <span class="green">ONLINE</span> <span class="cursor"></span></div>
+      </div>
+    </div>
+    <div class="loading">
+      <div class="loading-bar"><div class="loading-bar-fill" id="loading-fill"></div></div>
+      <div class="loading-text">Calibrating AI brain...</div>
+    </div>
+    <button class="enter-btn" id="enter-btn" onclick="enterApp()">START CHATTING</button>
+  </div>
+</div>
+
+<div class="app-container" id="app">
+<div class="matrix-bg" id="matrix-bg"></div>
+<div class="header"><h1>CASEQUERY CHATBOT</h1><span class="badge">AI ASSISTANT</span></div>
+<div class="case-select">
+  <label>CASE:</label>
+  <select id="case-select" onchange="changeCase()">
+    <option value="1">#001 - The Greenline Double Cross (Hard)</option>
+    <option value="2">#002 - The Deshpande Murder (Medium)</option>
+    <option value="3">#003 - The Ghost Protocol (Expert)</option>
+  </select>
+</div>
+<div class="chat" id="chat"></div>
+<div class="hint">Type natural language or SQL. Examples: "Show me all suspects", "SELECT * FROM call_logs"</div>
+<div class="input-row">
+  <input type="text" id="user-input" placeholder="Ask about the case..." onkeydown="if(event.key==='Enter')send()">
+  <button onclick="send()">SEND</button>
+</div>
+</div>
+
+<script>
+function initSplashBg(){var bg=document.getElementById('splash-bg');if(!bg)return;var hex='0123456789ABCDEF';for(var i=0;i<20;i++){var el=document.createElement('div');el.className='hex';el.textContent=hex[Math.floor(Math.random()*hex.length)];el.style.left=Math.random()*100+'%';el.style.top=Math.random()*100+'%';el.style.animationDelay=Math.random()*3+'s';el.style.animationDuration=(2+Math.random()*3)+'s';bg.appendChild(el)}}
+initSplashBg();
+setTimeout(function(){document.getElementById('enter-btn').classList.add('show')},3000);
+function enterApp(){var splash=document.getElementById('splash');splash.classList.add('hidden');setTimeout(function(){splash.style.display='none';document.getElementById('app').classList.add('visible');initMatrix()},800)}
+function initMatrix(){var bg=document.getElementById('matrix-bg');if(!bg)return;var chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノ';for(var i=0;i<30;i++){var col=document.createElement('div');col.className='matrix-col';col.style.left=Math.random()*100+'%';col.style.animationDuration=(5+Math.random()*10)+'s';col.style.animationDelay=Math.random()*5+'s';col.style.fontSize=(10+Math.random()*8)+'px';var text='';for(var j=0;j<20;j++)text+=chars[Math.floor(Math.random()*chars.length)]+'\n';col.textContent=text;bg.appendChild(col)}}
+
+var currentCase=1;
+var caseHints={1:"You are investigating The Greenline Double Cross. A theft and murder at Greenline Storage, Mumbai. 6 suspects. Write SQL queries to find the truth.",2:"You are investigating The Deshpande Murder. Rohini Deshmukh was murdered, made to look like suicide. Find the real killer.",3:"You are investigating The Ghost Protocol. NexVault DeFi was drained of $5M. Ghost_X is the hacker. Cyber Cell officer Vikram was murdered."};
+var synonyms={suspects:"SELECT * FROM suspects",access:"SELECT * FROM access_logs",alibis:"SELECT * FROM alibis",transactions:"SELECT * FROM transactions",cctv:"SELECT * FROM cctv_logs",calls:"SELECT * FROM call_logs",delivery:"SELECT * FROM delivery_orders",evidence:"SELECT * FROM evidence",psychological:"SELECT * FROM psychological_records",family:"SELECT * FROM family_records",watch:"SELECT * FROM watch_evidence",phone:"SELECT * FROM phone_records",forensic:"SELECT * FROM forensic_report",blackmail:"SELECT * FROM blackmail_records",background:"SELECT * FROM background_records",contracts:"SELECT * FROM smart_contracts",croo:"SELECT * FROM croo_agent_store",darkweb:"SELECT * FROM dark_web_messages",wallets:"SELECT * FROM wallet_connections",victims:"SELECT * FROM nexvault_victims",diary:"SELECT * FROM diary_entries",vikram:"SELECT * FROM vikram_case_files"};
+function changeCase(){currentCase=parseInt(document.getElementById('case-select').value);document.getElementById('chat').innerHTML='';addMsg('info','Switched to Case #'+String(currentCase).padStart(3,'0'));addMsg('bot',caseHints[currentCase]);addMsg('info','Try: suspects, cctv, calls, evidence, or ask a question in plain English.')}
+function addMsg(type,content){var c=document.getElementById('chat'),d=document.createElement('div');d.className='msg '+type;d.innerHTML=content;c.appendChild(d);c.scrollTop=c.scrollHeight}
+function showTyping(){var c=document.getElementById('chat'),d=document.createElement('div');d.className='typing';d.id='typing';d.innerHTML='<span></span><span></span><span></span>';c.appendChild(d);c.scrollTop=c.scrollHeight}
+function hideTyping(){var t=document.getElementById('typing');if(t)t.remove()}
+function renderTbl(rows){if(!rows||!rows.length)return'<em>No results</em>';var cols=Object.keys(rows[0]);var h='<table><tr>'+cols.map(function(c){return '<th>'+c+'</th>'}).join('')+'</tr>';rows.forEach(function(r,i){h+='<tr style="animation:fadeIn 0.2s ease-out '+i*0.05+'s both">'+cols.map(function(c){return '<td>'+(r[c]!==null&&r[c]!==undefined?r[c]:'')+'</td>'}).join('')+'</tr>'});return h+'</table>'}
+function naturalToSQL(input){var l=input.toLowerCase();for(var k in synonyms){if(l.includes(k))return synonyms[k]}if(l.includes('who')&&l.includes('suspect'))return 'SELECT name, role FROM suspects';if(l.includes('cctv')||l.includes('camera'))return 'SELECT * FROM cctv_logs';if(l.includes('alibi'))return 'SELECT * FROM alibis';if(l.includes('evidence')||l.includes('clue'))return 'SELECT * FROM evidence';if(l.includes('transaction')||l.includes('money'))return 'SELECT * FROM transactions';if(l.includes('height'))return 'SELECT name, height FROM suspects';if(l.includes('motive')||l.includes('why'))return 'SELECT name, motive FROM suspects';if(l.includes('table')||l.includes('schema')){var tables={1:["suspects","access_logs","alibis","transactions","cctv_logs","call_logs","delivery_orders","evidence","psychological_records","family_records"],2:["suspects","access_logs","watch_evidence","phone_records","forensic_report","cctv_logs","blackmail_records","background_records"],3:["suspects","transactions","smart_contracts","croo_agent_store","dark_web_messages","wallet_connections","nexvault_victims","evidence","diary_entries","vikram_case_files"]};return 'SHOW_TABLES:'+tables[currentCase].join(',')}return input}
+function send(){var inp=document.getElementById('user-input'),text=inp.value.trim();if(!text)return;addMsg('user',text);inp.value='';var sql=naturalToSQL(text);if(sql.startsWith('SHOW_TABLES:')){var tables=sql.replace('SHOW_TABLES:','').split(',');addMsg('bot','<b>Available tables:</b><br>'+tables.map(function(t){return '&bull; '+t}).join('<br>'));return}addMsg('info','SQL: '+sql);showTyping();fetch('/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case_id:currentCase,query:sql})}).then(function(r){return r.json()}).then(function(data){hideTyping();if(data.success){if(data.rows.length===0){addMsg('bot','No results found. Try different query.')}else{addMsg('bot','<div style="margin-bottom:4px;color:#888;font-size:11px;">'+data.count+' row(s) returned</div>'+renderTbl(data.rows))}}else{addMsg('error',data.error)}}).catch(function(e){hideTyping();addMsg('error','Server error: '+e.message)})}
+addMsg('bot',caseHints[1]);
+addMsg('info','Type a question or SQL query to begin investigating.');
+</script>
+</body>
+</html>

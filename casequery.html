@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaseQuery Agent - SQL Murder Mystery</title>
+<link rel="stylesheet" href="_anim.css">
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="splash-bg" id="splash-bg"></div>
+  <div class="logo-container">
+    <div class="rings"><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+    <div class="logo" onclick="enterApp()" style="cursor:pointer">
+      <svg viewBox="0 0 120 120" fill="none">
+        <circle cx="50" cy="50" r="35" stroke="#00ff41" stroke-width="4" fill="none" style="animation:magnifierSwing 2s ease-in-out infinite;transform-origin:50px 50px"/>
+        <line x1="75" y1="75" x2="105" y2="105" stroke="#00ff41" stroke-width="5" stroke-linecap="round"/>
+        <text x="50" y="48" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="18" font-weight="bold">SQL</text>
+        <text x="50" y="65" text-anchor="middle" fill="#ffd700" font-family="Courier New" font-size="9">SELECT *</text>
+        <circle cx="50" cy="50" r="38" stroke="#00ff4122" stroke-width="1" fill="none">
+          <animate attributeName="r" values="38;45;38" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    <div class="title">CASEQUERY</div>
+    <div class="subtitle">SQL MURDER MYSTERY AGENT</div>
+    <div class="terminal">
+      <div class="terminal-header"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div></div>
+      <div class="terminal-body">
+        <div class="terminal-line"><span class="green">$</span> initializing casequery_agent <span class="green">v2.0</span>...</div>
+        <div class="terminal-line"><span class="green">$</span> loading databases... <span class="yellow">3 cases found</span></div>
+        <div class="terminal-line"><span class="green">$</span> connecting to <span class="yellow">CROO Testnet</span>...</div>
+        <div class="terminal-line"><span class="green">$</span> CAP Protocol: <span class="green">ACTIVE</span> <span class="cursor"></span></div>
+      </div>
+    </div>
+    <div class="loading">
+      <div class="loading-bar"><div class="loading-bar-fill" id="loading-fill"></div></div>
+      <div class="loading-text">Decrypting case files...</div>
+    </div>
+    <button class="enter-btn" id="enter-btn" onclick="enterApp()">ENTER INVESTIGATION</button>
+  </div>
+</div>
+
+<div class="app-container" id="app">
+<div class="matrix-bg" id="matrix-bg"></div>
+<div class="header"><h1>CASEQUERY AGENT</h1><span class="badge">CROO TESTNET</span></div>
+<div class="wallet-bar">
+  <span>WALLET: <span class="address">0x7f3a9b2c</span></span>
+  <span>BALANCE: <span class="balance" id="balance">10.00</span> USDC</span>
+</div>
+<div class="main">
+  <div class="sidebar"><h2>Cases</h2><div id="cases-list"></div></div>
+  <div class="content">
+    <div class="briefing" id="briefing"><h2>Select a case to begin</h2><p>Choose a case from the sidebar. Write SQL queries to investigate. Find the criminal. Win USDC.</p></div>
+    <div class="stake-section" id="stake-section" style="display:none">
+      <label>STAKE (USDC):</label>
+      <input type="number" id="stake-amount" value="1" min="0.5" step="0.5">
+      <button onclick="placeStake()">STAKE & PLAY</button>
+      <span class="stake-status not-staked" id="stake-status">Not staked</span>
+    </div>
+    <div class="chat-area" id="chat"></div>
+    <div class="input-bar">
+      <textarea id="query-input" placeholder="SELECT * FROM suspects;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendQuery();}"></textarea>
+      <div class="buttons"><button onclick="sendQuery()">RUN</button><button class="secondary" onclick="showTables()">TABLES</button></div>
+    </div>
+    <div class="verdict-bar" id="verdict-bar" style="display:none">
+      <input type="text" id="verdict-input" placeholder="Enter criminal name...">
+      <button onclick="submitVerdict()">SUBMIT VERDICT</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function initSplashBg(){var bg=document.getElementById('splash-bg');if(!bg)return;var hex='0123456789ABCDEF';for(var i=0;i<20;i++){var el=document.createElement('div');el.className='hex';el.textContent=hex[Math.floor(Math.random()*hex.length)];el.style.left=Math.random()*100+'%';el.style.top=Math.random()*100+'%';el.style.animationDelay=Math.random()*3+'s';el.style.animationDuration=(2+Math.random()*3)+'s';bg.appendChild(el)}}
+initSplashBg();
+setTimeout(function(){document.getElementById('enter-btn').classList.add('show')},3000);
+function enterApp(){var splash=document.getElementById('splash');splash.classList.add('hidden');setTimeout(function(){splash.style.display='none';document.getElementById('app').classList.add('visible');initMatrix()},800)}
+function initMatrix(){var bg=document.getElementById('matrix-bg');if(!bg)return;var chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノ';for(var i=0;i<30;i++){var col=document.createElement('div');col.className='matrix-col';col.style.left=Math.random()*100+'%';col.style.animationDuration=(5+Math.random()*10)+'s';col.style.animationDelay=Math.random()*5+'s';col.style.fontSize=(10+Math.random()*8)+'px';var text='';for(var j=0;j<20;j++)text+=chars[Math.floor(Math.random()*chars.length)]+'\n';col.textContent=text;bg.appendChild(col)}}
+
+var currentCase=null,staked=false,sessionId='session_'+Date.now();
+var cases=[
+  {id:1,title:"The Greenline Double Cross",difficulty:"Hard",stake:1,win:1.5,briefing:"Raat 20 June 2026. Greenline Storage, Mumbai. $40,000 ke electronics gayab. Mr. Arvind Sharma - murder. 6 log the us raat. Do alag crimes. Ek hi raat. Dhundo - kaun tha?",tables:["suspects","access_logs","alibis","transactions","cctv_logs","call_logs","delivery_orders","evidence","psychological_records","family_records"]},
+  {id:2,title:"The Deshpande Murder",difficulty:"Medium",stake:1,win:1.5,briefing:"20 June 2026. Mumbai. Rohini Deshmukh - murder. Pehle suicide laga. Omkar ne sach pakda. 10 clues - sab connected.",tables:["suspects","access_logs","watch_evidence","phone_records","forensic_report","cctv_logs","blackmail_records","background_records"]},
+  {id:3,title:"The Ghost Protocol",difficulty:"Expert",stake:2,win:3,briefing:"Mumbai. 2026. NexVault DeFi - $5M drain. Ghost_X - identity unknown. 10,000 victims. Ek Cyber Cell officer - murder.",tables:["suspects","transactions","smart_contracts","croo_agent_store","dark_web_messages","wallet_connections","nexvault_victims","evidence","diary_entries","vikram_case_files"]}
+];
+function renderCases(){document.getElementById('cases-list').innerHTML=cases.map(function(c,i){return '<div class="case-card" id="case-'+c.id+'" onclick="selectCase('+c.id+')" style="animation:slideUp 0.3s ease-out '+i*0.1+'s both"><div class="title">#'+String(c.id).padStart(3,'0')+' - '+c.title+'</div><div class="meta">Difficulty: <span class="difficulty-'+c.difficulty.toLowerCase()+'">'+c.difficulty+'</span></div><div class="stake">Stake: '+c.stake+' USDC - Win: '+c.win+' USDC</div></div>'}).join('')}
+function selectCase(id){currentCase=cases.find(function(c){return c.id===id});document.querySelectorAll('.case-card').forEach(function(c){c.classList.remove('active')});document.getElementById('case-'+id).classList.add('active');document.getElementById('briefing').innerHTML='<h2>#'+String(id).padStart(3,'0')+' - '+currentCase.title+'</h2><p>'+currentCase.briefing+'</p><div class="tables">'+currentCase.tables.map(function(t){return '<span class="table-tag">'+t+'</span>'}).join('')+'</div>';document.getElementById('stake-section').style.display='flex';document.getElementById('stake-section').style.opacity='1';document.getElementById('stake-section').style.transform='translateY(0)';document.getElementById('verdict-bar').style.display='flex';document.getElementById('chat').innerHTML='';staked=false;document.getElementById('stake-status').className='stake-status not-staked';document.getElementById('stake-status').textContent='Not staked';addMessage('system','Case #'+String(id).padStart(3,'0')+' loaded. '+currentCase.tables.length+' tables available. Stake USDC to begin.');document.getElementById('query-input').focus()}
+function addMessage(type,content){var chat=document.getElementById('chat'),div=document.createElement('div');div.className='chat-msg '+type;div.innerHTML=content;chat.appendChild(div);chat.scrollTop=chat.scrollHeight}
+function renderTable(rows){if(!rows.length)return'<em>No results</em>';var cols=Object.keys(rows[0]);var html='<table><tr>'+cols.map(function(c){return '<th>'+c+'</th>'}).join('')+'</tr>';rows.forEach(function(r,i){html+='<tr style="animation:fadeIn 0.2s ease-out '+i*0.05+'s both">'+cols.map(function(c){return '<td>'+(r[c]!==null&&r[c]!==undefined?r[c]:'')+'</td>'}).join('')+'</tr>'});return html+'</table>'}
+function showTyping(){var chat=document.getElementById('chat'),div=document.createElement('div');div.className='chat-msg system';div.id='typing-indicator';div.innerHTML='<span style="animation:pulse-ring 1s infinite;display:inline-block">Analyzing query</span> ...';chat.appendChild(div);chat.scrollTop=chat.scrollHeight}
+function hideTyping(){var t=document.getElementById('typing-indicator');if(t)t.remove()}
+function sendQuery(){if(!currentCase)return addMessage('error','Select a case first!');var input=document.getElementById('query-input'),query=input.value.trim();if(!query)return;addMessage('user','<pre>'+query+'</pre>');input.value='';showTyping();fetch('/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case_id:currentCase.id,query:query})}).then(function(r){return r.json()}).then(function(data){hideTyping();if(data.success){addMessage('result','<div style="margin-bottom:4px;color:#888;font-size:11px;">'+data.count+' row(s) returned</div>'+renderTable(data.rows))}else{addMessage('error',data.error)}}).catch(function(e){hideTyping();addMessage('error','Server error: '+e.message)})}
+function showTables(){if(!currentCase)return addMessage('error','Select a case first!');addMessage('system','Fetching table schemas...');currentCase.tables.forEach(function(table,i){setTimeout(function(){fetch('/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case_id:currentCase.id,query:'PRAGMA table_info('+table+')'})}).then(function(r){return r.json()}).then(function(data){if(data.success){addMessage('system','<b>'+table+'</b>: '+data.rows.map(function(r){return r.name}).join(', ')}}).catch(function(){})},i*150)})}
+function placeStake(){if(!currentCase)return;var amount=parseFloat(document.getElementById('stake-amount').value);fetch('/api/stake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,case_id:currentCase.id,amount:amount,wallet:'0x7f3a9b2c'})}).then(function(r){return r.json()}).then(function(data){if(data.success){staked=true;var ss=document.getElementById('stake-section');ss.style.transition='all 0.5s ease-out';ss.style.opacity='0';ss.style.transform='translateY(-20px)';setTimeout(function(){ss.style.display='none'},500);document.getElementById('balance').textContent=(10-amount).toFixed(2);addMessage('success','Staked '+amount+' USDC via CAP Protocol');addMessage('system','Now investigate! Write SQL queries to find the criminal.')}}).catch(function(e){addMessage('error','Stake failed: '+e.message)})}
+function submitVerdict(){if(!currentCase)return;var answer=document.getElementById('verdict-input').value.trim();if(!answer)return addMessage('error','Enter a name!');addMessage('user','VERDICT: '+answer);fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case_id:currentCase.id,answer:answer})}).then(function(r){return r.json()}).then(function(data){if(data.correct){addMessage('success','CORRECT! '+data.correct_answer);if(staked){fetch('/api/payout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,correct:true})}).then(function(r){return r.json()}).then(function(pdata){if(pdata.success){var bal=parseFloat(document.getElementById('balance').textContent);document.getElementById('balance').textContent=(bal+pdata.amount).toFixed(2);addMessage('success','WON '+pdata.amount+' USDC! TX: '+pdata.tx_hash)}})}}else{addMessage('error','WRONG! Try again.');if(staked){fetch('/api/payout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,correct:false})}).catch(function(){})}}}).catch(function(e){addMessage('error','Verify failed: '+e.message)})}
+renderCases();
+</script>
+</body>
+</html>
