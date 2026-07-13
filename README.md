@@ -22,4 +22,4 @@ No luck. No guessing. Pure SQL skill.
 Stake. Solve. Collect.
 
 Built on CROO. Powered by CAP. Verified on-chain.
-LIVE-https://dragging-disband-wieldable.ngrok-free.dev/casequery.html
+LIVE-https://v0-murdermystery.vercel.app/casequery.html
